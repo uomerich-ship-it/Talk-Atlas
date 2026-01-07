@@ -1,38 +1,74 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import {
+  settings,
+  translations,
+  type Setting,
+  type InsertSetting,
+  type Translation,
+  type InsertTranslation,
+} from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Settings
+  getSettings(): Promise<Setting[]>;
+  getSetting(key: string): Promise<Setting | undefined>;
+  createOrUpdateSetting(setting: InsertSetting): Promise<Setting>;
+
+  // Translations
+  getTranslations(): Promise<Translation[]>;
+  createTranslation(translation: InsertTranslation): Promise<Translation>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getSettings(): Promise<Setting[]> {
+    return await db.select().from(settings);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getSetting(key: string): Promise<Setting | undefined> {
+    const [setting] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, key));
+    return setting;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createOrUpdateSetting(insertSetting: InsertSetting): Promise<Setting> {
+    const [existing] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, insertSetting.key));
+
+    if (existing) {
+      const [updated] = await db
+        .update(settings)
+        .set({ value: insertSetting.value })
+        .where(eq(settings.id, existing.id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db
+      .insert(settings)
+      .values(insertSetting)
+      .returning();
+    return created;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getTranslations(): Promise<Translation[]> {
+    return await db
+      .select()
+      .from(translations)
+      .orderBy(desc(translations.createdAt));
+  }
+
+  async createTranslation(insertTranslation: InsertTranslation): Promise<Translation> {
+    const [created] = await db
+      .insert(translations)
+      .values(insertTranslation)
+      .returning();
+    return created;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
