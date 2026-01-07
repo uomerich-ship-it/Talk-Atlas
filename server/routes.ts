@@ -3,6 +3,13 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import OpenAI from "openai";
+
+// Using Replit AI Integrations for OpenAI access
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -13,23 +20,37 @@ export async function registerRoutes(
     try {
       const input = api.translation.translate.input.parse(req.body);
       
-      // MOCK TRANSLATION LOGIC (as requested for MVP)
-      // In a real app, we'd use the settings to get an API key and call OpenAI/etc.
-      const mockTranslation = `[${input.targetLang}] ${input.text} (Translated)`;
+      const response = await openai.chat.completions.create({
+        model: "gpt-5", // Latest gpt-5 model
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful translation assistant. Translate the user's text to ${input.targetLang}. Only provide the translated text. Do not include any explanations or extra words.`,
+          },
+          {
+            role: "user",
+            content: input.text,
+          },
+        ],
+        max_completion_tokens: 1024,
+      });
+
+      const translatedText = response.choices[0].message.content || "";
       
-      const translationRecord = await storage.createTranslation({
+      await storage.createTranslation({
         sourceText: input.text,
         targetLanguage: input.targetLang,
-        translatedText: mockTranslation,
+        translatedText: translatedText,
       });
 
       res.json({
         original: input.text,
-        translated: mockTranslation,
+        translated: translatedText,
         sourceLang: input.sourceLang || "auto",
         targetLang: input.targetLang,
       });
     } catch (err) {
+      console.error("Translation error:", err);
       if (err instanceof z.ZodError) {
         res.status(400).json({
           message: err.errors[0].message,

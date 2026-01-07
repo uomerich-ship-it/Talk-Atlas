@@ -16,6 +16,15 @@ const LANGUAGES = [
   { code: 'it', name: 'Italian' },
   { code: 'hi', name: 'Hindi' },
   { code: 'ar', name: 'Arabic' },
+  { code: 'ko', name: 'Korean' },
+  { code: 'tr', name: 'Turkish' },
+  { code: 'vi', name: 'Vietnamese' },
+  { code: 'pl', name: 'Polish' },
+  { code: 'nl', name: 'Dutch' },
+  { code: 'sv', name: 'Swedish' },
+  { code: 'no', name: 'Norwegian' },
+  { code: 'fi', name: 'Finnish' },
+  { code: 'da', name: 'Danish' },
 ];
 
 export function TranslationCard() {
