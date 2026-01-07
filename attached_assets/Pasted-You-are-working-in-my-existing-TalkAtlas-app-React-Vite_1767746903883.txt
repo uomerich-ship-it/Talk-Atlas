@@ -1,0 +1,173 @@
+You are working in my existing TalkAtlas app (React + Vite + Tailwind + react-globe.gl + Zustand). The UI already matches a neon/space/glass style (Aqua #00FFFF accents, dark starfield background, modern glass cards like the screenshot). Implement the following features end-to-end, returning only the updated/created files with code.
+
+1) Countries list (ALL countries)
+
+Add a “Countries” panel (desktop: left sidebar; mobile: collapsible drawer button). It must list every country in the world derived from the SAME dataset used by the globe polygons (world-atlas/countries-110m.json). DO NOT hardcode a full country list.
+
+Each row shows:
+
+Country Name
+
+If official languages count > 1 show “(N)” next to the name
+
+If exactly 1 language show no number
+
+If unknown languages show “(?)”
+
+Include:
+
+search box
+
+sort A–Z (default) + sort by language count (desc)
+
+clicking a row selects that country (same selection state as globe click)
+
+2) Official languages mapping (offline-ready)
+
+Create local JSON in the repo:
+
+client/src/data/countryLanguages.json (ISO3 -> array of language codes)
+Example:
+{ "USA": ["en"], "CAN": ["en","fr"], "CHE": ["de","fr","it","rm"] }
+
+If the globe polygon data does not provide ISO3 consistently, create:
+
+client/src/data/countryNameToISO3.json (ONLY for missing cases, minimal fallback map)
+Do not crash if mapping is missing; languages = [].
+
+Normalize language codes:
+
+Prefer ISO 639-1 (en, fr, es, de, pt, etc.)
+
+If a code is longer, safely normalize to first two letters (lowercase) but never throw.
+
+Create:
+
+client/src/data/countries.ts
+This must build the final normalized country array by merging polygons + language mapping:
+type CountryEntry = { name: string; iso3?: string; languages: string[]; languageCount: number; }
+
+Export:
+
+getCountries(): CountryEntry[]
+
+getCountryByName(name): CountryEntry | undefined
+
+3) HD “real atlas” globe upgrade
+
+Update GlobeView to look high-definition, real, colourful:
+
+Use HD earth texture + bump/normal map (public CDN ok)
+
+Subtle atmosphere glow (light aqua)
+
+Realistic shading/lighting, not wireframe-only
+
+Keep polygons but make them elegant: thin borders, hover highlight, click highlight
+
+Interactions:
+
+Hover shows tooltip with country name
+
+Hover brightens outline + slight altitude
+
+Click selects country, keeps highlight, and smoothly pans/zooms camera toward it (best-effort)
+
+Selection from list should also highlight/pan globe
+
+4) “Translate to this country language”
+
+When a country is selected (from globe click or list click), user can choose:
+
+Button: “Translate to this country”
+Rules:
+
+If selected country has exactly 1 official language: auto-set translation target language to that code immediately
+
+If >1 official language: show a dropdown of those languages + “Confirm” to set the target language
+
+If unknown languages: show disabled state / message “Languages unknown”
+
+This control must exist in BOTH:
+
+the Countries panel (near selection)
+
+the Country modal (if you have one)
+
+5) Bind selection to Translation UI (must work)
+
+Update Zustand store:
+
+countries: CountryEntry[] (loaded once on app start)
+
+selectedCountry: CountryEntry | null
+
+hoveredCountryName?: string (optional)
+
+targetLang: string
+
+setTargetLang(lang)
+
+setSelectedCountry(country): also sets selectedCountry and if languages length === 1, auto-set targetLang
+
+Update TranslationPanel:
+
+the “To” language dropdown must reflect store.targetLang
+
+if user changes target language manually, update store.targetLang
+
+translation function must use the current store.targetLang
+
+keep existing glass/neon styling consistent with screenshot
+
+6) Styling constraints (match existing screenshot)
+
+Keep dark starfield/space look + glassmorphism + high contrast
+
+Accent colors must stay: Aqua #00FFFF, Yellow #FFD700, Burgundy #800020
+
+Sidebar/drawer must match the same design system (rounded, translucent, subtle borders)
+
+No UI regressions to existing translator card
+
+7) File changes (minimum expected)
+
+Create/Update these (and any others you need, but keep it clean):
+
+client/src/data/countryLanguages.json
+
+client/src/data/countryNameToISO3.json (only if needed)
+
+client/src/data/countries.ts
+
+client/src/types.ts (add CountryEntry type if needed)
+
+client/src/store/useAppStore.ts
+
+client/src/components/countries/CountryListPanel.tsx
+
+client/src/components/globe/GlobeView.tsx
+
+client/src/components/globe/CountryModal.tsx (if exists, enhance)
+
+client/src/components/translation/TranslationPanel.tsx
+
+client/src/app/App.tsx (layout: add Countries panel)
+
+Acceptance checklist (must satisfy)
+
+Countries panel shows ALL countries derived from globe dataset
+
+Countries with multiple official languages show “(N)”
+
+HD globe looks realistic + colourful + atmosphere glow
+
+Hover tooltip works, click selects
+
+“Translate to this country” sets translation target language correctly (single auto, multi choose)
+
+No crashes if language mapping missing
+
+No TypeScript errors; app runs with npm run dev
+
+Now implement everything above and output only the code grouped by file path.
