@@ -16,6 +16,16 @@ const MOCK_COUNTRY_DATA: Record<string, { time: string; weather: string; languag
   "France": { time: "10:20 PM CET", weather: "12°C Cloudy", languages: ["French"] },
   "United Kingdom": { time: "9:20 PM GMT", weather: "8°C Drizzle", languages: ["English"] },
   "Italy": { time: "10:20 PM CET", weather: "14°C Clear", languages: ["Italian"] },
+  "Canada": { time: "4:20 PM EST", weather: "2°C Cloudy", languages: ["English", "French"] },
+  "Australia": { time: "8:20 AM AEST", weather: "24°C Sunny", languages: ["English"] },
+  "Mexico": { time: "3:20 PM CST", weather: "25°C Sunny", languages: ["Spanish"] },
+  "Spain": { time: "10:20 PM CET", weather: "18°C Clear", languages: ["Spanish", "Catalan"] },
+  "South Korea": { time: "5:20 AM KST", weather: "12°C Clear", languages: ["Korean"] },
+  "Turkey": { time: "11:20 PM TRT", weather: "14°C Cloudy", languages: ["Turkish"] },
+  "Vietnam": { time: "3:20 AM ICT", weather: "26°C Rainy", languages: ["Vietnamese"] },
+  "Egypt": { time: "11:20 PM EET", weather: "20°C Clear", languages: ["Arabic"] },
+  "South Africa": { time: "11:20 PM SAST", weather: "22°C Clear", languages: ["English", "Afrikaans", "Zulu"] },
+  "Argentina": { time: "6:20 PM ART", weather: "20°C Clear", languages: ["Spanish"] },
 };
 
 function getCountryInfo(name: string) {
