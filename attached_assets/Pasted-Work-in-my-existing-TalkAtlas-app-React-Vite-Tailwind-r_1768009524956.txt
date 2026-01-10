@@ -1,0 +1,82 @@
+Work in my existing TalkAtlas app (React + Vite + Tailwind + react-globe.gl + Zustand).
+Do NOT redesign the app. Improve clarity, usability, and visual quality only.
+
+IMPORTANT CONSTRAINTS:
+- Map navigation is already good → do NOT change how panning, zooming, hover, or clicking works.
+- Country amount is already OK → do NOT remove or reduce countries; only add more if already supported.
+- Country list on the left is good → improve usability only.
+- Keep glassmorphism, dark space theme, Aqua/Yellow/Burgundy accents.
+- No TypeScript errors. App must run with npm run dev.
+
+----------------------------------------------------------------
+1) COUNTRY LIST CLEANUP + BETTER USE
+----------------------------------------------------------------
+- Remove ALL question mark indicators “(?)” from the country list.
+- If a country has unknown language mapping, show ONLY the country name (no badge, no symbol).
+
+Improve how the list is utilised (WITHOUT removing pan-to-country behavior):
+
+A) Quick Actions (top of list)
+- Add a small section at the top:
+  - Button: “Translate to selected country”
+  - If selected country has:
+    • 1 language → auto-set translation target language
+    • Multiple languages → show dropdown to choose target language + confirm
+    • No language data → disable button with subtle message
+
+B) Pinned / Favorites
+- Add a star icon on each country row
+- Allow pin/unpin
+- Show pinned countries in a “Pinned” section above the main list
+- Persist pinned countries using Zustand persist (localStorage)
+
+C) Recent Countries
+- Track last 5 selected countries
+- Show them in a “Recent” section at the top
+- Clicking a recent country selects it and pans the map
+
+Keep existing search + sorting. Keep styling consistent.
+
+----------------------------------------------------------------
+2) HEADER CHANGE
+----------------------------------------------------------------
+- Move the app name “TalkAtlas” to the TOP RIGHT.
+- Keep it small, subtle, and clean (not a large logo).
+- Do not clutter the header.
+
+----------------------------------------------------------------
+3) MAP VISUAL QUALITY (NO BEHAVIOR CHANGES)
+----------------------------------------------------------------
+Do NOT change interactions. ONLY improve visual clarity:
+
+- Make the globe look sharper and clearer
+- Use higher-resolution earth textures if available
+- Improve land/sea contrast slightly so it looks more dynamic
+- Keep current colors and atmosphere, just refine clarity
+- Slightly crisper country outlines
+- Maintain performance (no heavy post-processing)
+
+----------------------------------------------------------------
+4) BACKGROUND (UNIVERSE / STARS)
+----------------------------------------------------------------
+- Improve star/universe background to look more high-definition and realistic
+- Subtle, high-quality starfield (no distraction)
+- Must not reduce UI readability
+- No heavy animations that affect performance
+
+----------------------------------------------------------------
+5) TRANSLATION BINDING (MUST WORK)
+----------------------------------------------------------------
+- Selecting a country (from list or map) must still pan the map
+- “Translate to selected country” must correctly set the target language
+- TranslationPanel must stay in sync with the selected target language
+- Manual language changes in TranslationPanel must update global state
+
+----------------------------------------------------------------
+OUTPUT RULES:
+- Return ONLY code
+- Group code by file path
+- Do NOT include explanations or commentary
+- Do NOT remove existing working features
+
+Now implement all of the above.

@@ -38,9 +38,7 @@
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-white;
     font-family: var(--font-body);
-    background-image: 
-      radial-gradient(circle at 50% 0%, hsl(var(--accent) / 0.2), transparent 70%),
-      radial-gradient(circle at 100% 100%, hsl(var(--primary) / 0.1), transparent 50%);
+    background: radial-gradient(circle at 50% 50%, #0a0a0f 0%, #020205 100%);
     background-attachment: fixed;
     position: relative;
     overflow-x: hidden;
@@ -51,15 +49,22 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
+    background-image: 
+      radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1.5px 1.5px at 50px 160px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 90px 40px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1.5px 1.5px at 130px 80px, #fff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 160px 120px, #fff, rgba(0,0,0,0));
     background-repeat: repeat;
-    opacity: 0.3;
-    animation: stars-move 100s linear infinite;
+    background-size: 200px 200px;
+    opacity: 0.15;
+    animation: stars-twinkle 10s infinite alternate;
   }
 
-  @keyframes stars-move {
-    from { background-position: 0 0; }
-    to { background-position: 1000px 1000px; }
+  @keyframes stars-twinkle {
+    from { opacity: 0.1; transform: scale(1); }
+    to { opacity: 0.2; transform: scale(1.05); }
   }
 
   h1, h2, h3, h4, h5, h6 {
