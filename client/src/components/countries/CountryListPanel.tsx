@@ -5,6 +5,18 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { SettingsPanel } from '../ui/settings-panel';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 
 export function CountryListPanel() {
   const { 
@@ -16,8 +28,8 @@ export function CountryListPanel() {
     pinnedCountries,
     togglePin,
     recentCountries,
-    isPremium,
-    setPremium
+    clearRecent,
+    isPremium
   } = useAppStore();
   
   const [search, setSearch] = useState('');
@@ -158,9 +170,29 @@ export function CountryListPanel() {
 
           {recentList.length > 0 && (
             <div className="space-y-1">
-              <div className="flex items-center gap-2 px-2 mb-1">
-                <Clock className="w-3 h-3 text-primary" />
-                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Recent</span>
+              <div className="flex items-center justify-between px-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-3 h-3 text-primary" />
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Recent</span>
+                </div>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors">Clear</button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="glass-panel border-white/10 text-white">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear recent selections?</AlertDialogTitle>
+                      <AlertDialogDescription className="text-muted-foreground">
+                        This will remove all your recently selected nations from the list.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="bg-white/5 border-white/10 hover:bg-white/10">Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={clearRecent} className="bg-primary text-black hover:bg-primary/90">Yes</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
               {recentList.map(renderCountryRow)}
             </div>
@@ -177,25 +209,29 @@ export function CountryListPanel() {
 
       <div className="mt-4 space-y-3">
         {!isPremium && (
-          <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center">
+          <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center animate-in fade-in duration-700">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-1">Sponsored</p>
             <p className="text-xs text-muted-foreground/60 italic">Your ad could be here</p>
           </div>
         )}
 
-        {!isPremium ? (
-          <Button 
-            variant="outline" 
-            className="w-full h-9 text-xs border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40"
-            onClick={() => setPremium(true)}
-          >
-            Go Premium — £1.99/mo
-          </Button>
-        ) : (
-          <div className="px-2 py-1.5 rounded-md bg-primary/5 border border-primary/10 text-center">
-            <span className="text-[10px] uppercase font-bold text-primary tracking-widest">Premium Member</span>
-          </div>
-        )}
+        <SettingsPanel>
+          {!isPremium ? (
+            <Button 
+              variant="outline" 
+              className="w-full h-9 text-xs border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40"
+            >
+              Go Premium — £1.99/mo
+            </Button>
+          ) : (
+            <Button 
+              variant="ghost" 
+              className="w-full px-2 py-1.5 rounded-md bg-primary/5 border border-primary/10 text-center h-auto hover:bg-primary/10 transition-all duration-300 shadow-[0_0_15px_rgba(0,255,255,0.05)] hover:shadow-[0_0_20px_rgba(0,255,255,0.15)] group"
+            >
+              <span className="text-[10px] uppercase font-bold text-primary tracking-widest group-hover:scale-105 transition-transform">Premium Member</span>
+            </Button>
+          )}
+        </SettingsPanel>
       </div>
     </div>
   );

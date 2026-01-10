@@ -1,0 +1,100 @@
+Work in my existing TalkAtlas app. Do NOT redesign the UI. Only improve monetisation flow and add a clear-recent option.
+
+================================================
+1) FIX MONETISATION FLOW (£1.99/mo + £19.99/year) – SMOOTH UX
+================================================
+
+Current issue:
+- Clicking “Go Premium – £1.99/mo” or “Premium Member” instantly flips state.
+Fix this so it feels smooth and intentional.
+
+Required behavior:
+
+A) Button navigation (IMPORTANT)
+- Clicking “Go Premium – £1.99/mo” OR clicking “Premium Member” must OPEN the Settings panel.
+- These buttons must NOT immediately activate premium.
+- They act as “Manage Membership / Upgrade” entry points only.
+
+B) Membership section inside Settings
+Add a clear “Membership” section in Settings with:
+- Current plan status:
+  - “Free (with ads)” OR
+  - “Premium (No ads)”
+- A primary CTA for Free users: “Become Full Member”
+  - IMPORTANT: Clicking “Become Full Member” should NOT instantly activate premium.
+  - Instead it should reveal/show plan options below (monthly + yearly).
+
+C) Plan options (show only after “Become Full Member” is clicked)
+Once “Become Full Member” is clicked, show a clean plan picker with:
+- Option 1: “Monthly – £1.99/mo”
+- Option 2: “Yearly – £19.99/year” (show this as “Best value” badge)
+- A confirm button: “Continue”
+- A small note: “No ads on Premium”
+
+Flow:
+- User clicks “Become Full Member” → plan picker appears
+- User selects Monthly or Yearly → clicks “Continue”
+- Show a short loading state (~800ms) “Activating…”
+- Then set isPremium = true and store the chosen plan type in state (monthly|yearly)
+- Remove ads immediately
+- Show subtle success feedback: “Premium activated”
+- Keep Settings open (no page reload)
+
+D) Premium state & manage
+When Premium is active:
+- Show “Premium Member” badge/button in sidebar, but it should only OPEN Settings (never toggle state).
+- In Settings Membership section show:
+  - “Premium Active”
+  - “Plan: Monthly (£1.99/mo)” or “Plan: Yearly (£19.99/year)”
+  - Button: “Manage Premium” (no real billing yet; just placeholder)
+
+E) Persistence
+- Persist isPremium and selectedPlan (monthly/yearly) using Zustand persist (localStorage)
+- Refresh must keep premium state and plan
+- Ads only render when isPremium === false
+
+F) Stripe-ready wiring (architecture only, no live payments yet)
+Add a clean future-proof structure WITHOUT adding real Stripe keys:
+- Create a placeholder service file: client/src/services/billing/index.ts
+- Export functions:
+  - startCheckout(plan: "monthly" | "yearly"): Promise<void>
+  - restorePurchases(): Promise<void>
+- For now, startCheckout just waits 800ms and resolves successfully (mock).
+- Ensure Membership UI calls startCheckout(plan) before setting premium state.
+This keeps it “Stripe-ready” later without changing UI again.
+
+G) Premium glow animation (subtle)
+After premium activates:
+- Add a subtle glow animation to the “Premium Member” badge/button (soft aqua glow).
+- Keep it tasteful and not distracting.
+
+================================================
+2) CLEAR RECENT SELECTIONS
+================================================
+
+In the Countries list:
+- Next to the “RECENT” label, add a small text button: “Clear”
+- Clicking “Clear” shows a small confirmation:
+  - “Clear recent selections?” → Yes / Cancel
+- On Yes:
+  - Clear recentCountries from Zustand
+  - Update UI immediately
+  - Persist cleared state
+
+================================================
+STRICT RULES
+================================================
+- Do NOT change map navigation or country selection logic
+- Do NOT disturb existing layout, spacing, or visual style
+- Keep glassmorphism, dark theme, and current colors
+- No TypeScript errors
+- App must run with npm run dev
+
+================================================
+OUTPUT RULES
+================================================
+- Return ONLY code
+- Group code by file path
+- No explanations or commentary
+
+Now implement these changes.

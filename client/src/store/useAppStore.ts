@@ -6,9 +6,11 @@ interface ExtendedAppState extends AppState {
   pinnedCountries: string[]; // ISO3 or Name
   recentCountries: string[]; // ISO3 or Name
   isPremium: boolean;
+  selectedPlan: "monthly" | "yearly" | null;
   togglePin: (countryId: string) => void;
   addRecent: (countryId: string) => void;
-  setPremium: (isPremium: boolean) => void;
+  clearRecent: () => void;
+  setPremium: (isPremium: boolean, plan?: "monthly" | "yearly") => void;
 }
 
 export const useAppStore = create<ExtendedAppState>()(
@@ -20,6 +22,7 @@ export const useAppStore = create<ExtendedAppState>()(
       pinnedCountries: [],
       recentCountries: [],
       isPremium: false,
+      selectedPlan: null,
 
       setCountries: (countries) => set({ countries }),
       
@@ -50,7 +53,9 @@ export const useAppStore = create<ExtendedAppState>()(
         set({ recentCountries: [countryId, ...filtered].slice(0, 5) });
       },
 
-      setPremium: (isPremium) => set({ isPremium }),
+      clearRecent: () => set({ recentCountries: [] }),
+
+      setPremium: (isPremium, plan) => set({ isPremium, selectedPlan: plan || null }),
     }),
     {
       name: 'talk-atlas-storage',
@@ -60,6 +65,7 @@ export const useAppStore = create<ExtendedAppState>()(
         recentCountries: state.recentCountries,
         targetLang: state.targetLang,
         isPremium: state.isPremium,
+        selectedPlan: state.selectedPlan,
       }),
     }
   )
