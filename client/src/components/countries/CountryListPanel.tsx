@@ -15,7 +15,9 @@ export function CountryListPanel() {
     setTargetLang,
     pinnedCountries,
     togglePin,
-    recentCountries
+    recentCountries,
+    isPremium,
+    setPremium
   } = useAppStore();
   
   const [search, setSearch] = useState('');
@@ -69,9 +71,12 @@ export function CountryListPanel() {
 
   return (
     <div className="w-80 h-full glass-panel flex flex-col p-4 border-r border-white/10 z-20">
-      <div className="flex items-center gap-2 mb-4">
-        <Globe className="w-5 h-5 text-primary" />
-        <h2 className="text-xl font-bold neon-text uppercase tracking-tighter">Atlas</h2>
+      <div className="mb-4">
+        <h1 className="text-xs font-bold tracking-[0.3em] uppercase neon-text opacity-60 mb-1">TalkAtlas</h1>
+        <div className="flex items-center gap-2">
+          <Globe className="w-4 h-4 text-primary" />
+          <h2 className="text-lg font-bold tracking-tight text-foreground/80">Atlas</h2>
+        </div>
       </div>
 
       <div className="space-y-3 mb-4">
@@ -170,6 +175,29 @@ export function CountryListPanel() {
           </div>
         </div>
       </ScrollArea>
+
+      <div className="mt-4 space-y-3">
+        {!isPremium && (
+          <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-1">Sponsored</p>
+            <p className="text-xs text-muted-foreground/60 italic">Your ad could be here</p>
+          </div>
+        )}
+
+        {!isPremium ? (
+          <Button 
+            variant="outline" 
+            className="w-full h-9 text-xs border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40"
+            onClick={() => setPremium(true)}
+          >
+            Go Premium — £1.99/mo
+          </Button>
+        ) : (
+          <div className="px-2 py-1.5 rounded-md bg-primary/5 border border-primary/10 text-center">
+            <span className="text-[10px] uppercase font-bold text-primary tracking-widest">Premium Member</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,71 @@
+Work in my existing TalkAtlas app (React + Vite + Tailwind + Zustand).
+Do NOT redesign the app. Only make the changes below.
+
+-------------------------------------------------
+1) FIX APP NAME POSITION (VERY IMPORTANT)
+-------------------------------------------------
+- Move the app name “TalkAtlas” to the LEFT HAND SIDE.
+- Place it ABOVE the “Search nations” text box in the country list panel.
+- Keep it small, subtle, and clean (not a large logo).
+- It should feel like a section title, not a header banner.
+- Do NOT move it anywhere else.
+- Do NOT change any other layout or spacing.
+
+-------------------------------------------------
+2) ADD MONETISATION (SUBSCRIPTION + ADS)
+-------------------------------------------------
+Implement a simple, clean monetisation system WITHOUT disturbing the current UI.
+
+PLANS:
+- Free plan:
+  - App fully usable
+  - Shows ads
+- Premium plan:
+  - £1.99 per month
+  - No ads
+
+IMPLEMENTATION (MVP LEVEL):
+A) State
+- Add subscription state to Zustand:
+  - isPremium: boolean
+  - setPremium(boolean)
+- Default: free user (ads enabled)
+
+B) Ads (Free users only)
+- Add small, non-intrusive ad placeholders:
+  - One below the translation panel OR
+  - One at the bottom of the countries list
+- Ads must be hidden automatically when isPremium === true
+- Ads should be visually subtle (glass card style placeholder text like “Sponsored”)
+
+C) Upgrade CTA
+- Add a small “Go Premium – £1.99/month” button:
+  - Place it in Settings OR bottom of country list
+  - Do NOT add popups
+- Clicking it should:
+  - Simulate successful upgrade (set isPremium = true)
+  - Remove ads instantly
+- No real payment gateway needed yet (mock logic only)
+
+D) Persist plan
+- Persist isPremium using Zustand persist (localStorage)
+- Refreshing the app must keep premium state
+
+-------------------------------------------------
+3) STRICT RULES
+-------------------------------------------------
+- Do NOT disturb existing design, colors, or layout
+- Do NOT change map navigation or country list logic
+- Do NOT introduce heavy UI elements
+- Keep glassmorphism and dark theme intact
+- No TypeScript errors
+- App must run with npm run dev
+
+-------------------------------------------------
+OUTPUT RULES
+-------------------------------------------------
+- Return ONLY code
+- Group code by file path
+- No explanations or commentary
+
+Now implement these changes.

@@ -9,7 +9,7 @@ import { LANGUAGES } from '../../data/languages';
 export function TranslationPanel() {
   const [sourceText, setSourceText] = useState('');
   const [sourceLang, setSourceLang] = useState('en');
-  const { targetLang, setTargetLang } = useAppStore();
+  const { targetLang, setTargetLang, isPremium } = useAppStore();
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
@@ -107,6 +107,13 @@ export function TranslationPanel() {
           <div className="flex items-center justify-center h-full text-muted-foreground/30 text-sm italic">Translation results...</div>
         )}
       </div>
+
+      {!isPremium && (
+        <div className="mt-4 py-2 px-4 rounded-xl bg-white/5 border border-white/5 text-center flex items-center justify-center gap-3">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground/30 font-bold">Ad</span>
+          <span className="text-xs text-muted-foreground/40">Try TalkAtlas Premium to remove all ads</span>
+        </div>
+      )}
     </div>
   );
 }

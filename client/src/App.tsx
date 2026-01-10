@@ -12,13 +12,6 @@ function TalkAtlasApp() {
       <CountryListPanel />
 
       <div className="flex-1 flex flex-col relative z-10">
-        <header className="absolute top-0 right-0 p-6 z-20 pointer-events-none">
-          <div className="flex flex-col items-end">
-            <h1 className="text-xl font-bold tracking-[0.3em] uppercase neon-text opacity-80">TalkAtlas</h1>
-            <div className="h-[1px] w-12 bg-primary/30 mt-1" />
-          </div>
-        </header>
-
         <GlobeView />
         
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-full px-4 max-w-2xl">

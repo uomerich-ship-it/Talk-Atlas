@@ -48,7 +48,6 @@ export function GlobeView() {
           (d as any).properties.ADMIN === hoveredCountry ? 'rgba(0, 255, 255, 0.15)' : 'rgba(0, 255, 255, 0.03)'
         }
         polygonStrokeColor={() => '#00FFFF'}
-        polygonStrokeWidth={0.5}
         polygonAltitude={d => (d as any).properties.ADMIN === hoveredCountry ? 0.015 : 0.005}
         
         onPolygonHover={d => setHoveredCountry(d ? (d as any).properties.ADMIN : null)}
