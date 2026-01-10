@@ -42,6 +42,24 @@
       radial-gradient(circle at 50% 0%, hsl(var(--accent) / 0.2), transparent 70%),
       radial-gradient(circle at 100% 100%, hsl(var(--primary) / 0.1), transparent 50%);
     background-attachment: fixed;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
+    background-repeat: repeat;
+    opacity: 0.3;
+    animation: stars-move 100s linear infinite;
+  }
+
+  @keyframes stars-move {
+    from { background-position: 0 0; }
+    to { background-position: 1000px 1000px; }
   }
 
   h1, h2, h3, h4, h5, h6 {
