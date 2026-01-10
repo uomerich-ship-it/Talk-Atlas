@@ -72,10 +72,9 @@ export function CountryListPanel() {
   return (
     <div className="w-80 h-full glass-panel flex flex-col p-4 border-r border-white/10 z-20">
       <div className="mb-4">
-        <h1 className="text-xs font-bold tracking-[0.3em] uppercase neon-text opacity-60 mb-1">TalkAtlas</h1>
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-primary" />
-          <h2 className="text-lg font-bold tracking-tight text-foreground/80">Atlas</h2>
+          <h2 className="text-lg font-bold tracking-tight text-foreground/80">Talk Atlas</h2>
         </div>
       </div>
 
