@@ -221,7 +221,7 @@ export function CountryListPanel() {
               variant="outline" 
               className="w-full h-9 text-xs border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40"
             >
-              Go Premium – £1.99/mo
+              Premium Access – £1.99/mo
             </Button>
           ) : (
             <Button 
