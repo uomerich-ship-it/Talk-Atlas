@@ -221,14 +221,14 @@ export function CountryListPanel() {
               variant="outline" 
               className="w-full h-9 text-xs border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40"
             >
-              Go Premium — £1.99/mo
+              Go Premium – £1.99/mo
             </Button>
           ) : (
             <Button 
               variant="ghost" 
               className="w-full px-2 py-1.5 rounded-md bg-primary/5 border border-primary/10 text-center h-auto hover:bg-primary/10 transition-all duration-300 shadow-[0_0_15px_rgba(0,255,255,0.05)] hover:shadow-[0_0_20px_rgba(0,255,255,0.15)] group"
             >
-              <span className="text-[10px] uppercase font-bold text-primary tracking-widest group-hover:scale-105 transition-transform">Premium Member</span>
+              <span className="text-[10px] uppercase font-bold text-primary tracking-widest group-hover:scale-105 transition-transform">Premium Active – Manage</span>
             </Button>
           )}
         </SettingsPanel>

@@ -126,9 +126,43 @@ export function SettingsPanel({ children }: { children: React.ReactNode }) {
                   </div>
                 )
               ) : (
-                <Button variant="outline" className="w-full border-white/10 hover:bg-white/5 h-10">
-                  Manage Premium
-                </Button>
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full border-white/10 hover:bg-white/5 h-10">
+                    Manage Premium
+                  </Button>
+                  {!showPlans ? (
+                    <button 
+                      onClick={() => setShowPlans(true)}
+                      className="w-full text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest font-bold"
+                    >
+                      View plans
+                    </button>
+                  ) : (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="grid grid-cols-1 gap-2">
+                        <div className={`flex items-center justify-between p-3 rounded-lg border bg-black/20 border-white/10`}>
+                          <div className="text-left">
+                            <p className="text-sm font-bold">Monthly</p>
+                            <p className="text-xs text-muted-foreground">£1.99 per month</p>
+                          </div>
+                        </div>
+                        <div className={`flex items-center justify-between p-3 rounded-lg border bg-black/20 border-white/10 relative`}>
+                          <div className="text-left">
+                            <p className="text-sm font-bold">Yearly</p>
+                            <p className="text-xs text-muted-foreground">£19.99 per year</p>
+                          </div>
+                          <Badge variant="outline" className="bg-primary/20 border-primary/40 text-[10px] uppercase">Best Value</Badge>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setShowPlans(false)}
+                        className="w-full text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest font-bold"
+                      >
+                        Hide plans
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </section>
