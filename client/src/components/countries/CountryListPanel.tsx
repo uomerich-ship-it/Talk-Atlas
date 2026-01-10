@@ -216,21 +216,17 @@ export function CountryListPanel() {
         )}
 
         <SettingsPanel>
-          {!isPremium ? (
-            <Button 
-              variant="outline" 
-              className="w-full h-9 text-xs border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40"
-            >
+          <Button 
+            variant={isPremium ? "ghost" : "outline"}
+            className={isPremium 
+              ? "w-full px-2 py-1.5 rounded-md bg-primary/5 border border-primary/10 text-center h-auto hover:bg-primary/10 transition-all duration-300 shadow-[0_0_15px_rgba(0,255,255,0.05)] hover:shadow-[0_0_20px_rgba(0,255,255,0.15)] group"
+              : "w-full h-9 text-xs border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40"
+            }
+          >
+            <span className={isPremium ? "text-[10px] uppercase font-bold text-primary tracking-widest group-hover:scale-105 transition-transform" : ""}>
               Premium Access – £1.99/mo
-            </Button>
-          ) : (
-            <Button 
-              variant="ghost" 
-              className="w-full px-2 py-1.5 rounded-md bg-primary/5 border border-primary/10 text-center h-auto hover:bg-primary/10 transition-all duration-300 shadow-[0_0_15px_rgba(0,255,255,0.05)] hover:shadow-[0_0_20px_rgba(0,255,255,0.15)] group"
-            >
-              <span className="text-[10px] uppercase font-bold text-primary tracking-widest group-hover:scale-105 transition-transform">Premium Active – Manage</span>
-            </Button>
-          )}
+            </span>
+          </Button>
         </SettingsPanel>
       </div>
     </div>
