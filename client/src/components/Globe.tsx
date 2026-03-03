@@ -62,7 +62,8 @@ export function GlobeVisualization() {
   useEffect(() => {
     if (globeEl.current) {
       globeEl.current.controls().autoRotate = true;
-      globeEl.current.controls().autoRotateSpeed = 0.5;
+      globeEl.current.controls().autoRotateSpeed = 0.3;
+      globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 });
     }
   }, []);
 
@@ -94,16 +95,17 @@ export function GlobeVisualization() {
   };
 
   return (
-    <div className="absolute inset-0 z-0 bg-background overflow-hidden">
+    <div className="absolute inset-0 z-0 overflow-hidden" style={{ background: 'radial-gradient(ellipse at 50% 60%, #020818 0%, #000308 100%)' }}>
       <GlobeTGL
         ref={globeEl}
         width={dimensions.width}
         height={dimensions.height}
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
+        globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+        bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
         backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
         polygonsData={countries.features}
-        polygonCapColor={() => 'rgba(0, 255, 255, 0.1)'}
-        polygonSideColor={() => 'rgba(0, 255, 255, 0.2)'}
+        polygonCapColor={() => 'rgba(0, 255, 255, 0.08)'}
+        polygonSideColor={() => 'rgba(0, 255, 255, 0.15)'}
         polygonStrokeColor={() => '#00FFFF'}
         polygonLabel={({ properties }: any) => `
           <div class="px-2 py-1 bg-black/80 border border-primary/50 rounded text-xs text-primary font-mono">
@@ -112,7 +114,8 @@ export function GlobeVisualization() {
         `}
         onPolygonClick={handleCountryClick}
         atmosphereColor="#00FFFF"
-        atmosphereAltitude={0.15}
+        atmosphereAltitude={0.25}
+        rendererConfig={{ antialias: true, alpha: true }}
       />
 
       {/* Country Info Modal */}

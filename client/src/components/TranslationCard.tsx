@@ -64,7 +64,13 @@ export function TranslationCard() {
   };
 
   return (
-    <div className="glass-panel rounded-3xl p-6 w-full max-w-2xl mx-auto shadow-2xl border-t border-white/20">
+    <div className="rounded-3xl p-6 w-full max-w-2xl mx-auto" style={{
+      background: 'rgba(2, 8, 24, 0.75)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      border: '1px solid rgba(0, 255, 255, 0.15)',
+      boxShadow: '0 0 40px rgba(0, 255, 255, 0.08), 0 25px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(0, 255, 255, 0.1)',
+    }}>
       {/* Header Controls */}
       <div className="flex items-center justify-between mb-6 bg-black/20 p-1.5 rounded-xl">
         <select 
