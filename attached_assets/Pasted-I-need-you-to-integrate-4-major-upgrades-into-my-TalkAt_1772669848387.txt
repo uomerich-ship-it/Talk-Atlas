@@ -1,0 +1,152 @@
+I need you to integrate 4 major upgrades into my TalkAtlas app. Please implement all of the following:
+
+---
+
+## 1. 🌌 CINEMATIC UNIVERSE BACKGROUND
+
+Create a new file: src/components/globe/UniverseBackground.tsx
+
+This component renders a Three.js canvas behind the globe with:
+- 8,000+ stars across 3 depth layers using THREE.Points with BufferGeometry
+- Stars must have realistic spectral color variation: blue-white (O/B class), white (A class), yellow-white (F/G class, sun-like), orange (K class), red (M class giants)
+- Realistic brightness distribution: very few brilliant stars, many faint — use Math.random() with exponential bias
+- All stars distributed on a sphere using spherical coordinates (theta/phi) for full sky coverage
+- A Milky Way band: higher density of small stars concentrated along the equatorial plane (phi near PI/2), with a soft glowing core using a CanvasTexture radial gradient plane
+- 3 nebula clouds using layered THREE.PlaneGeometry meshes with CanvasTexture radial gradients:
+  - Blue-purple nebula (top-right area, position 200, 150, -500)
+  - Teal-green nebula (bottom-left, position -250, -120, -480)
+  - Red-orange nebula (right side, position 300, -80, -520)
+- A gas giant planet (Jupiter-like, position 320, 180, -600):
+  - Procedural banded texture using canvas gradients (ochre/brown bands)
+  - A "Great Red Spot" ellipse drawn on the canvas texture
+  - Ring system using THREE.RingGeometry with a canvas gradient ring texture
+  - Soft additive glow sphere around it
+- An ice giant planet (Neptune-like, position -280, -160, -550):
+  - Banded blue canvas texture
+  - Atmospheric rim glow using BackSide MeshBasicMaterial
+- DirectionalLight simulating a distant sun + AmbientLight
+- Slow continuous rotation animation (different speeds per layer for parallax depth)
+- Nebula planes pulse opacity subtly using Math.sin in the animation loop
+- The canvas must be position: absolute, inset: 0, z-index: 0, pointer-events: none, full width/height
+
+Then update src/components/globe/GlobeView.tsx to:
+- Import and render <UniverseBackground /> as the first child inside the container div
+- Set backgroundImageUrl="" on GlobeTGL (empty string, so the Three.js renderer is transparent and our background shows through)
+- Set atmosphereColor="rgba(0, 180, 255, 1)" and atmosphereAltitude={0.18}
+- Add a radial-gradient overlay div (z-index 1, pointer-events none) for depth vignette
+- The GlobeTGL wrapper div should be z-index 2
+- Add a top vignette div (z-index 3) fading from rgba(2,2,2,0.7) to transparent
+
+---
+
+## 2. 🌐 DEEPL TRANSLATION API (with free fallback)
+
+Create src/services/translation.ts with:
+```typescript
+const DEEPL_API_URL = 'https://api-free.deepl.com/v2/translate';
+const DEEPL_API_KEY = import.meta.env.VITE_DEEPL_API_KEY as string;
+
+// Map ISO codes to DeepL codes (EN→EN-GB, PT→PT-PT, etc.)
+const DEEPL_LANG_MAP: Record<string, string> = {
+  en: 'EN-GB', pt: 'PT-PT', zh: 'ZH', 'zh-cn': 'ZH', nb: 'NB', uk: 'UK',
+};
+
+export interface TranslationResult {
+  translated: string;
+  detectedSourceLang?: string;
+  service: 'deepl' | 'fallback';
+}
+
+export async function translateText(text, sourceLang, targetLang): Promise<TranslationResult>
+// Try DeepL first if VITE_DEEPL_API_KEY exists
+// Fall back to MyMemory free API: https://api.mymemory.translated.net/get?q=...&langpair=en|fr
+```
+
+Update src/components/translation/TranslationPanel.tsx to:
+- Remove the old useTranslate hook
+- Import translateText from services/translation
+- Add useState for translationResult, isTranslating
+- Call translateText() directly (async/await) in handleTranslate
+- Add "auto" option to source language dropdown (label: "Auto-detect")
+- Add Enter key handler (Shift+Enter = newline, Enter = translate)
+- Add a Volume2 icon button that calls speechSynthesis.speak() on the translated text
+- Show a small badge "DeepL" or "Free" depending on result.service
+- Language swap button: also swap the translated text back into the source textarea
+- Keep the existing UI style (glass-panel, cyan primary colors)
+
+---
+
+## 3. 💳 STRIPE PREMIUM PAYMENTS
+
+Create src/services/stripe.ts:
+```typescript
+import { loadStripe } from '@stripe/stripe-js';
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
+export async function startPremiumCheckout(userEmail?: string) {
+  // POST to /api/create-checkout-session with:
+  // { priceId: VITE_STRIPE_PREMIUM_PRICE_ID, email, successUrl, cancelUrl }
+  // Then call stripe.redirectToCheckout({ sessionId })
+  // If VITE_STRIPE_PUBLISHABLE_KEY is missing, return { success: false, error: 'Setup required' }
+}
+```
+
+Also add a comment block showing the server-side Express route needed:
+POST /api/create-checkout-session
+→ stripe.checkout.sessions.create({ mode: 'subscription', ... })
+→ returns { sessionId }
+POST /api/stripe-webhook
+→ on checkout.session.completed → mark user as premium in DB
+
+Update the Premium button in CountryListPanel.tsx and/or TranslationPanel.tsx to:
+- Call startPremiumCheckout() on click
+- Show a loading spinner while processing
+- Show a toast if keys aren't configured yet (with instructions)
+- Style it with a Crown icon and gold/yellow gradient border
+
+---
+
+## 4. 🎤 SPEECH-TO-TEXT (Web Speech API)
+
+Create src/hooks/useSpeechToText.ts:
+```typescript
+// Uses window.SpeechRecognition || window.webkitSpeechRecognition
+// Props: language (BCP-47 like "en-US"), continuous, interimResults, onResult, onError
+// Returns: { status, transcript, interimTranscript, isSupported, startListening, stopListening, resetTranscript }
+// status: 'idle' | 'listening' | 'processing' | 'error'
+// Handle errors: 'not-allowed' → "Microphone permission denied", 'network' → "Network error"
+// Cleanup recognition on unmount
+```
+
+Update TranslationPanel.tsx mic button to:
+- Import and use useSpeechToText hook
+- Pass language based on selected sourceLang (format: "en-US", "fr-FR", etc.)
+- When isListening: button turns red, shows MicOff icon, pulses with animate-pulse class
+- Show interimTranscript in the textarea in real-time (lighter opacity or italic)
+- Final transcript sets sourceText
+- If !isSupported: disable mic button with a tooltip "Not supported in this browser"
+
+---
+
+## 5. ENV SETUP
+
+Create .env.example at project root:
+VITE_DEEPL_API_KEY=your_deepl_api_key_here
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here
+VITE_STRIPE_PREMIUM_PRICE_ID=price_your_price_id_here
+
+Add to package.json dependencies (run npm install):
+- @stripe/stripe-js
+
+---
+
+## IMPORTANT NOTES FOR REPLIT:
+- The app uses React + TypeScript + Vite + Tailwind + Three.js (already installed)
+- State management is Zustand (useAppStore)
+- UI uses shadcn/ui components
+- The globe uses react-globe.gl (GlobeTGL)
+- All env vars must be prefixed with VITE_ to be accessible in the frontend
+- Do NOT break existing functionality: country list panel, pinning, recent countries, settings
+- The translation fallback (MyMemory) must work even with no API keys configured
+- The Stripe button must gracefully show a toast if keys aren't set, not crash
+- Keep all existing CSS classes and glass-panel styling
