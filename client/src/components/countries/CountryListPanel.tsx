@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { Search, Globe, Star, Clock, ChevronRight } from 'lucide-react';
+import { Search, Globe, Star, Clock, ChevronRight, Crown, Loader2 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { SettingsPanel } from '../ui/settings-panel';
+import { startPremiumCheckout } from '../../services/stripe';
+import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +36,17 @@ export function CountryListPanel() {
   
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'languages'>('name');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handlePremiumCheckout = async () => {
+    setCheckoutLoading(true);
+    const result = await startPremiumCheckout();
+    setCheckoutLoading(false);
+    if (!result.success) {
+      toast({ title: "Premium Setup", description: result.error, variant: "destructive" });
+    }
+  };
 
   const processedCountries = useMemo(() => {
     return countries
@@ -215,19 +228,37 @@ export function CountryListPanel() {
           </div>
         )}
 
-        <SettingsPanel>
-          <Button 
-            variant={isPremium ? "ghost" : "outline"}
-            className={isPremium 
-              ? "w-full px-2 py-1.5 rounded-md bg-primary/5 border border-primary/10 text-center h-auto hover:bg-primary/10 transition-all duration-300 shadow-[0_0_15px_rgba(0,255,255,0.05)] hover:shadow-[0_0_20px_rgba(0,255,255,0.15)] group"
-              : "w-full h-9 text-xs border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40"
-            }
+        <div className="flex flex-col gap-2">
+          <SettingsPanel>
+            <Button 
+              variant={isPremium ? "ghost" : "outline"}
+              className={isPremium 
+                ? "w-full px-2 py-1.5 rounded-md bg-primary/5 border border-primary/10 text-center h-auto hover:bg-primary/10 transition-all duration-300 shadow-[0_0_15px_rgba(0,255,255,0.05)] hover:shadow-[0_0_20px_rgba(0,255,255,0.15)] group"
+                : "w-full h-9 text-xs border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40"
+              }
+              data-testid="button-settings"
+            >
+              <span className={isPremium ? "text-[10px] uppercase font-bold text-primary tracking-widest group-hover:scale-105 transition-transform" : ""}>
+                Premium Access – £1.99/mo
+              </span>
+            </Button>
+          </SettingsPanel>
+
+          <Button
+            onClick={handlePremiumCheckout}
+            disabled={checkoutLoading}
+            className="w-full h-9 text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-yellow-600/20 to-yellow-500/20 border border-yellow-500/30 text-yellow-400 hover:border-yellow-400/50 hover:bg-yellow-500/30 transition-all"
+            variant="outline"
+            data-testid="button-premium-checkout"
           >
-            <span className={isPremium ? "text-[10px] uppercase font-bold text-primary tracking-widest group-hover:scale-105 transition-transform" : ""}>
-              Premium Access – £1.99/mo
-            </span>
+            {checkoutLoading ? (
+              <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+            ) : (
+              <Crown className="w-3.5 h-3.5 mr-2" />
+            )}
+            {checkoutLoading ? 'Processing...' : 'Upgrade Now'}
           </Button>
-        </SettingsPanel>
+        </div>
       </div>
     </div>
   );

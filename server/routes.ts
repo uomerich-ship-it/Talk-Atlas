@@ -98,6 +98,79 @@ export async function registerRoutes(
     res.json(setting);
   });
 
+  // DeepL proxy route (keeps API key server-side)
+  app.post('/api/deepl-translate', async (req, res) => {
+    try {
+      const { text, sourceLang, targetLang } = req.body;
+      const apiKey = process.env.DEEPL_API_KEY;
+      if (!apiKey) {
+        return res.status(501).json({ message: 'DeepL not configured' });
+      }
+
+      const deeplLangMap: Record<string, string> = {
+        en: 'EN-GB', pt: 'PT-PT', zh: 'ZH', nb: 'NB', uk: 'UK',
+      };
+      const mapLang = (code: string) => deeplLangMap[code] || code.toUpperCase();
+
+      const params = new URLSearchParams({
+        text,
+        target_lang: mapLang(targetLang),
+        auth_key: apiKey,
+      });
+      if (sourceLang && sourceLang !== 'auto') {
+        params.set('source_lang', mapLang(sourceLang));
+      }
+
+      const deeplRes = await fetch('https://api-free.deepl.com/v2/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+      });
+
+      if (!deeplRes.ok) {
+        return res.status(deeplRes.status).json({ message: `DeepL error: ${deeplRes.status}` });
+      }
+
+      const data = await deeplRes.json();
+      res.json({
+        translated: data.translations?.[0]?.text || '',
+        detectedSourceLang: data.translations?.[0]?.detected_source_language?.toLowerCase(),
+        service: 'deepl',
+      });
+    } catch (err) {
+      console.error('DeepL proxy error:', err);
+      res.status(500).json({ message: 'DeepL translation failed' });
+    }
+  });
+
+  // Stripe checkout session (requires STRIPE_SECRET_KEY env var)
+  app.post('/api/create-checkout-session', async (req, res) => {
+    try {
+      const stripeKey = process.env.STRIPE_SECRET_KEY;
+      if (!stripeKey) {
+        return res.status(501).json({ message: 'Stripe is not configured on the server. Set STRIPE_SECRET_KEY.' });
+      }
+
+      const { default: Stripe } = await import('stripe');
+      const stripe = new Stripe(stripeKey);
+      const { priceId, email, successUrl, cancelUrl } = req.body;
+
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [{ price: priceId, quantity: 1 }],
+        customer_email: email || undefined,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      });
+
+      res.json({ sessionId: session.id });
+    } catch (err: any) {
+      console.error('Stripe checkout error:', err);
+      res.status(500).json({ message: err.message || 'Checkout session creation failed' });
+    }
+  });
+
   return httpServer;
 }
 
