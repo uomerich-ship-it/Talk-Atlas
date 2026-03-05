@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 type Status = 'idle' | 'listening' | 'processing' | 'error';
 
@@ -59,11 +60,28 @@ export function useSpeechToText(options: SpeechToTextOptions = {}) {
     setInterimTranscript('');
   }, []);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (!SpeechRecognitionAPI) {
       setStatus('error');
       setErrorMessage('Speech recognition not supported');
       return;
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const micModule = '@capacitor/microphone';
+        const { Microphone } = await import(/* @vite-ignore */ micModule);
+        const { microphone } = await Microphone.checkPermissions();
+        if (microphone !== 'granted') {
+          const result = await Microphone.requestPermissions();
+          if (result.microphone !== 'granted') {
+            setStatus('error');
+            setErrorMessage('Microphone permission is required for voice input.');
+            return;
+          }
+        }
+      } catch {
+      }
     }
 
     if (recognitionRef.current) {

@@ -1,0 +1,19 @@
+{
+  "appName": "TalkAtlas",
+  "bundleId": "com.talkAtlas.app",
+  "version": "1.0.0",
+  "buildNumber": "1",
+  "price": "£1.99/month",
+  "category": "Travel / Education",
+  "shortDescription": "Translate any language by tapping the globe",
+  "fullDescription": "TalkAtlas is the world's most beautiful translation app. Spin a stunning 3D globe, tap any country, and instantly translate to that country's language.\n\nFeatures:\n• Interactive 3D globe with 195 countries\n• Voice input — speak and translate\n• Text-to-speech — hear your translation\n• 30+ languages supported\n• Cinematic space background with planets and nebulae\n\nPremium — £1.99/month\n• Unlimited translations\n• Remove ads\n• Priority language support",
+  "keywords": ["translate","translator","globe","language","travel","world","speech","atlas"],
+  "privacyPolicyUrl": "https://talkAtlas.app/privacy",
+  "supportUrl": "https://talkAtlas.app/support",
+  "copyright": "2025 TalkAtlas",
+  "contentRating": "4+",
+  "permissions": {
+    "microphone": "Used for voice input so you can speak to translate",
+    "internet": "Required to fetch translations and country data"
+  }
+}

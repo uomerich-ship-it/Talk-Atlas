@@ -5,6 +5,9 @@
 @tailwind utilities;
 
 :root {
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+
   /* HSL Values */
   --background: 222 47% 11%;
   --foreground: 210 40% 98%;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Mic, MicOff, Camera, ArrowRightLeft, Sparkles, Loader2, Copy, Check, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Camera, ArrowRightLeft, Sparkles, Loader2, Copy, Check, Volume2, Languages } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAppStore } from '../../store/useAppStore';
 import { LANGUAGES } from '../../data/languages';
@@ -106,8 +106,12 @@ export function TranslationPanel() {
     : sourceText;
 
   return (
-    <div className="glass-panel rounded-3xl p-6 w-full max-w-2xl mx-auto shadow-2xl border-t border-white/20" data-testid="translation-panel">
-      <div className="flex items-center justify-between mb-6 bg-black/20 p-1.5 rounded-xl">
+    <div className="w-full flex flex-col gap-4" data-testid="translation-panel">
+      <div className="flex items-center gap-2 mb-2">
+        <Languages className="w-4 h-4 text-primary" />
+        <h3 className="text-sm font-bold uppercase tracking-widest text-primary/80">Translator</h3>
+      </div>
+      <div className="flex items-center justify-between bg-black/20 p-1.5 rounded-xl">
         <select 
           value={sourceLang}
           onChange={(e) => setSourceLang(e.target.value)}
@@ -141,7 +145,7 @@ export function TranslationPanel() {
           value={displayText}
           onChange={(e) => setSourceText(e.target.value)}
           placeholder="Enter text to translate..."
-          className={`w-full h-32 bg-white/5 rounded-2xl p-4 pr-12 text-lg resize-none border border-transparent focus:border-primary/50 transition-all ${isListening ? 'italic text-white/60' : ''}`}
+          className={`w-full h-24 bg-white/5 rounded-2xl p-4 pr-12 text-lg resize-none border border-transparent focus:border-primary/50 transition-all ${isListening ? 'italic text-white/60' : ''}`}
           onKeyDown={handleKeyDown}
           data-testid="input-source-text"
         />
