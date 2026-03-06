@@ -27,13 +27,19 @@ Preferred communication style: Simple, everyday language.
 - **Runtime**: Node.js with Express
 - **Language**: TypeScript (compiled with tsx in development, esbuild for production)
 - **API Structure**: RESTful endpoints defined in shared/routes.ts with Zod schema validation
-- **AI Integration**: OpenAI API via Replit AI Integrations for translation services
+- **AI Integration**: OpenAI API via direct frontend calls (VITE_OPENAI_API_KEY)
 
 ### Translation Pipeline
-- **Primary**: DeepL API (via /api/deepl-translate server proxy, env: DEEPL_API_KEY)
-- **Secondary**: OpenAI GPT via server-side /api/translate endpoint (Replit AI Integrations)
+- **Primary**: DeepL API (direct frontend call, env: VITE_DEEPL_API_KEY)
+- **Secondary**: OpenAI GPT-4o-mini (direct frontend call, env: VITE_OPENAI_API_KEY)
 - **Fallback**: MyMemory free translation API (no key required)
 - **Service**: client/src/services/translation.ts handles cascading fallback logic
+
+### AI Features (client/src/services/aiFeatures.ts)
+- **Phrasebook**: 10 essential travel phrases with phonetic guides (GPT-4o-mini)
+- **Cultural Tips**: 6 customs/etiquette tips per country (GPT-4o-mini)
+- **Image Translation**: OCR + translate from photos (GPT-4o Vision)
+- **Audio Transcription**: Whisper API speech-to-text
 
 ### Payments
 - **Web**: Stripe (@stripe/stripe-js) for web checkout (VITE_STRIPE_PUBLISHABLE_KEY, VITE_STRIPE_PREMIUM_PRICE_ID)
@@ -48,9 +54,9 @@ Preferred communication style: Simple, everyday language.
 - **Static Data**: Local JSON files for country-to-language mappings (offline-ready)
 
 ### UI Layout
-- **Left**: CountryListPanel sidebar with country list, settings, and premium buttons
-- **Center**: Full-screen 3D globe (GlobeView + UniverseBackground)
-- **Right**: Collapsible translation drawer panel (slides in/out with glowing tab button)
+- **Left**: LeftDrawer with 3 tabs: Countries (CountryListPanel), Phrasebook (PhrasebookPanel), Culture (CulturalTipsPanel)
+- **Center**: Full-screen 3D globe (GlobeView + UniverseBackground) with transparent renderer
+- **Right**: Sliding drawer with 2 tabs: Translate (TranslationPanel), Wayfinder (WayfinderPanel)
 
 ### Project Structure
 ```
@@ -60,10 +66,12 @@ client/           # React frontend
       globe/        # GlobeView, UniverseBackground (Three.js starfield)
       translation/  # TranslationPanel (right-side drawer)
       countries/    # CountryListPanel with pin/recent/premium
+      left/         # LeftDrawer, PhrasebookPanel, CulturalTipsPanel
+      right/        # WayfinderPanel (Google Places search + translation)
       ui/           # shadcn/ui components, SettingsPanel
     data/           # Static JSON mappings (countryLanguages, languages)
     hooks/          # Custom React hooks (useSpeechToText with Capacitor mic, etc.)
-    services/       # Translation service, Stripe checkout, billing (RevenueCat)
+    services/       # Translation service, AI features, Stripe checkout, billing (RevenueCat)
     store/          # Zustand state management (useAppStore)
     pages/          # Page components (Home)
 server/             # Express backend
@@ -91,12 +99,15 @@ public/
 - **Drizzle ORM**: Type-safe database queries and schema management
 
 ### AI Services
-- **OpenAI API**: Translation functionality using GPT models
-- **Environment Variables**: AI_INTEGRATIONS_OPENAI_API_KEY, AI_INTEGRATIONS_OPENAI_BASE_URL (Replit AI Integrations)
+- **OpenAI API**: Translation, phrasebook, cultural tips, image translation, Whisper transcription
+- **Environment Variables**: VITE_OPENAI_API_KEY (direct frontend calls to OpenAI)
 
 ### Translation APIs
-- **DeepL API** (optional): DEEPL_API_KEY env var (server-side only, proxied via /api/deepl-translate)
+- **DeepL API** (optional): VITE_DEEPL_API_KEY env var (direct frontend call)
 - **MyMemory API** (free fallback): No key required
+
+### Places Search
+- **Google Places API** (optional): VITE_GOOGLE_PLACES_KEY env var (for Wayfinder panel)
 
 ### Payments
 - **Stripe** (optional, web): VITE_STRIPE_PUBLISHABLE_KEY, VITE_STRIPE_PREMIUM_PRICE_ID env vars
@@ -125,6 +136,8 @@ public/
 
 ### Environment Variables (.env.example)
 - VITE_DEEPL_API_KEY: DeepL translation API key (optional)
+- VITE_OPENAI_API_KEY: OpenAI API key for translation, AI features (optional)
+- VITE_GOOGLE_PLACES_KEY: Google Places API key for Wayfinder (optional)
 - VITE_STRIPE_PUBLISHABLE_KEY: Stripe publishable key (optional)
 - VITE_STRIPE_PREMIUM_PRICE_ID: Stripe price ID for premium plan (optional)
 - VITE_RC_API_KEY_IOS: RevenueCat iOS API key (optional, for native app)
@@ -132,9 +145,10 @@ public/
 
 ## Critical Rules (Do NOT Change)
 - Do NOT change src/store/useAppStore.ts
-- Do NOT change src/services/translation.ts
 - Do NOT change src/data/ folder
-- Do NOT change GlobeView.tsx
+- Do NOT change src/hooks/useSpeechToText.ts
 - Keep ALL existing data-testid attributes
 - Keep all existing CSS classes: glass-panel, neon-text, neon-border
 - Guard Capacitor/RevenueCat imports with isNativePlatform() checks
+- Translation must still work with NO keys via MyMemory fallback
+- WayfinderPanel shows clear message if VITE_GOOGLE_PLACES_KEY is missing

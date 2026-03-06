@@ -1,0 +1,872 @@
+=====================================================================
+TALKATLAS — MASTER PROMPT v2
+Paste this entire file into Replit AI in ONE go.
+Do every section in order. Do not skip any section.
+=====================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — ADD SECRETS IN REPLIT FIRST (do this before running)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In Replit go to: Tools → Secrets → add each of these:
+
+  VITE_DEEPL_API_KEY        = (your DeepL key)
+  VITE_OPENAI_API_KEY       = (your OpenAI key)
+  VITE_GOOGLE_PLACES_KEY    = (your Google Places API key — see note below)
+  VITE_RC_API_KEY_IOS       = (your RevenueCat iOS key)
+  VITE_RC_API_KEY_ANDROID   = (your RevenueCat Android key)
+
+NOTE on Google Places API key:
+  - Go to console.cloud.google.com
+  - Create a project → Enable "Places API" and "Maps JavaScript API"
+  - Create an API key → restrict it to your domain
+  - Free tier = $200 credit/month (~28,000 place searches free)
+  - If you do not have this key yet, leave VITE_GOOGLE_PLACES_KEY empty
+    and the Wayfinder will show a "coming soon" message gracefully
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — FIX STARS NOT SHOWING (critical globe fix)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The globe's WebGL renderer clears to black by default even when
+backgroundImageUrl is empty, hiding the UniverseBackground stars.
+
+In src/components/globe/GlobeView.tsx, find the third useEffect
+(the one that sets autoRotate) and ADD this code inside it,
+right after setting autoRotateSpeed:
+
+  // Force globe renderer to be transparent so UniverseBackground shows
+  const internalRenderer = globeEl.current?.renderer?.();
+  if (internalRenderer) {
+    internalRenderer.setClearColor(0x000000, 0);
+    internalRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  }
+
+Also in the same file, change the GlobeTGL props to add:
+  rendererConfig={{ antialias: true, alpha: true, clearColor: 0x000000, clearAlpha: 0 }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — WIRE UP DEEPL AND OPENAI API KEYS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The translation service currently calls /api/deepl-translate and
+/api/translate on the server. Update src/services/translation.ts
+to call the APIs directly from the frontend (Replit handles CORS).
+
+Replace the entire contents of src/services/translation.ts:
+
+---FILE START---
+export interface TranslationResult {
+  translated: string;
+  detectedSourceLang?: string;
+  service: 'deepl' | 'openai' | 'fallback';
+}
+
+const DEEPL_KEY   = import.meta.env.VITE_DEEPL_API_KEY as string;
+const OPENAI_KEY  = import.meta.env.VITE_OPENAI_API_KEY as string;
+
+const DEEPL_LANG_MAP: Record<string, string> = {
+  en: 'EN-GB', pt: 'PT-PT', zh: 'ZH', nb: 'NB', uk: 'UK',
+};
+function toDeepLCode(code: string): string {
+  return DEEPL_LANG_MAP[code.toLowerCase()] ?? code.toUpperCase();
+}
+
+async function translateWithDeepL(
+  text: string, sourceLang: string | null, targetLang: string
+): Promise<TranslationResult> {
+  if (!DEEPL_KEY) throw new Error('No DeepL key');
+  const body = new URLSearchParams({ text, target_lang: toDeepLCode(targetLang) });
+  if (sourceLang && sourceLang !== 'auto') body.set('source_lang', toDeepLCode(sourceLang));
+  const res = await fetch('https://api-free.deepl.com/v2/translate', {
+    method: 'POST',
+    headers: {
+      'Authorization': `DeepL-Auth-Key ${DEEPL_KEY}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: body.toString(),
+  });
+  if (!res.ok) throw new Error(`DeepL ${res.status}`);
+  const data = await res.json();
+  const t = data.translations?.[0];
+  return {
+    translated: t?.text ?? '',
+    detectedSourceLang: t?.detected_source_language?.toLowerCase(),
+    service: 'deepl',
+  };
+}
+
+async function translateWithOpenAI(
+  text: string, sourceLang: string | null, targetLang: string
+): Promise<TranslationResult> {
+  if (!OPENAI_KEY) throw new Error('No OpenAI key');
+  const langNames: Record<string, string> = {
+    en:'English', es:'Spanish', fr:'French', de:'German', it:'Italian',
+    pt:'Portuguese', ru:'Russian', ja:'Japanese', ko:'Korean', zh:'Chinese',
+    ar:'Arabic', hi:'Hindi', tr:'Turkish', pl:'Polish', nl:'Dutch',
+    sv:'Swedish', da:'Danish', fi:'Finnish', no:'Norwegian', uk:'Ukrainian',
+  };
+  const targetName = langNames[targetLang] ?? targetLang.toUpperCase();
+  const sourceName = sourceLang && sourceLang !== 'auto' ? (langNames[sourceLang] ?? sourceLang) : 'auto-detected language';
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      max_tokens: 1000,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a professional translator. Translate the user's text from ${sourceName} to ${targetName}. Reply with ONLY the translated text, nothing else.`,
+        },
+        { role: 'user', content: text },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenAI ${res.status}`);
+  const data = await res.json();
+  return {
+    translated: data.choices?.[0]?.message?.content?.trim() ?? '',
+    service: 'openai',
+  };
+}
+
+async function translateWithFallback(
+  text: string, sourceLang: string | null, targetLang: string
+): Promise<TranslationResult> {
+  const pair = `${sourceLang && sourceLang !== 'auto' ? sourceLang : 'en'}|${targetLang}`;
+  const res = await fetch(
+    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(pair)}`
+  );
+  const data = await res.json();
+  return { translated: data.responseData?.translatedText ?? text, service: 'fallback' };
+}
+
+export async function translateText(
+  text: string, sourceLang: string | null, targetLang: string
+): Promise<TranslationResult> {
+  try { return await translateWithDeepL(text, sourceLang, targetLang); } catch {}
+  try { return await translateWithOpenAI(text, sourceLang, targetLang); } catch {}
+  return translateWithFallback(text, sourceLang, targetLang);
+}
+---FILE END---
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — CREATE AI FEATURES SERVICE (OpenAI powered)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create a new file: src/services/aiFeatures.ts
+
+---FILE START---
+/**
+ * TalkAtlas AI Features — powered by OpenAI GPT-4o-mini
+ * 
+ * 1. getPhrasebook    — 10 essential travel phrases for a country/language
+ * 2. getCulturalTips  — customs, etiquette, and travel advice for a country
+ * 3. translateImage   — translate text found in a photo (GPT-4o Vision)
+ * 4. transcribeAudio  — Whisper API: better speech-to-text than browser API
+ */
+
+const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string;
+
+async function openAIChat(systemPrompt: string, userPrompt: string, model = 'gpt-4o-mini'): Promise<string> {
+  if (!OPENAI_KEY) throw new Error('OpenAI API key not configured');
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      max_tokens: 1000,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content?.trim() ?? '';
+}
+
+// ─── 1. Phrasebook ──────────────────────────────────────────────────────────
+export interface Phrase {
+  english: string;
+  translated: string;
+  phonetic: string;
+  category: string;
+}
+
+export async function getPhrasebook(countryName: string, targetLanguage: string): Promise<Phrase[]> {
+  const system = `You are a travel language expert. Always respond with valid JSON only, no markdown.`;
+  const prompt = `Give me exactly 10 essential travel phrases for visiting ${countryName} in ${targetLanguage}.
+Return a JSON array of objects with these exact fields:
+- english: the phrase in English
+- translated: the phrase in ${targetLanguage}
+- phonetic: pronunciation guide in English letters
+- category: one of "Greeting", "Food", "Navigation", "Emergency", "Shopping", "Polite"
+
+Example format: [{"english":"Hello","translated":"Hola","phonetic":"OH-lah","category":"Greeting"}]`;
+  const raw = await openAIChat(system, prompt);
+  const clean = raw.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean) as Phrase[];
+}
+
+// ─── 2. Cultural Tips ───────────────────────────────────────────────────────
+export interface CulturalTip {
+  title: string;
+  tip: string;
+  icon: string;
+}
+
+export async function getCulturalTips(countryName: string): Promise<CulturalTip[]> {
+  const system = `You are a cultural travel expert. Always respond with valid JSON only, no markdown.`;
+  const prompt = `Give me 6 important cultural tips, customs, and etiquette for visiting ${countryName}.
+Return a JSON array with fields:
+- title: short title (max 4 words)
+- tip: one sentence of advice (max 20 words)
+- icon: a single relevant emoji
+
+Example: [{"title":"Remove Your Shoes","tip":"Always remove shoes before entering homes and some restaurants.","icon":"👟"}]`;
+  const raw = await openAIChat(system, prompt);
+  const clean = raw.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean) as CulturalTip[];
+}
+
+// ─── 3. Image Translation (GPT-4o Vision) ───────────────────────────────────
+export async function translateImageText(
+  base64Image: string,
+  mediaType: string,
+  targetLanguage: string
+): Promise<{ original: string; translated: string }> {
+  if (!OPENAI_KEY) throw new Error('OpenAI API key not configured');
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image_url',
+            image_url: { url: `data:${mediaType};base64,${base64Image}`, detail: 'low' },
+          },
+          {
+            type: 'text',
+            text: `Extract ALL text visible in this image. Then translate it to ${targetLanguage}.
+Return JSON only: {"original": "extracted text here", "translated": "translation here"}`,
+          },
+        ],
+      }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Vision API error: ${res.status}`);
+  const data = await res.json();
+  const raw = data.choices?.[0]?.message?.content?.trim() ?? '{}';
+  const clean = raw.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+// ─── 4. Whisper Audio Transcription ─────────────────────────────────────────
+export async function transcribeAudio(audioBlob: Blob, language?: string): Promise<string> {
+  if (!OPENAI_KEY) throw new Error('OpenAI API key not configured');
+  const formData = new FormData();
+  formData.append('file', new File([audioBlob], 'audio.webm', { type: audioBlob.type }));
+  formData.append('model', 'whisper-1');
+  if (language && language !== 'auto') formData.append('language', language);
+  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_KEY}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`Whisper error: ${res.status}`);
+  const data = await res.json();
+  return data.text ?? '';
+}
+---FILE END---
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — CREATE LEFT SIDE DRAWER PANEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The left side currently has a fixed CountryListPanel.
+We will convert the whole left side into a drawer system 
+with 3 slide-out panels accessed by icon tabs.
+
+Create a new file: src/components/left/LeftDrawer.tsx
+
+---FILE START---
+import { useState } from 'react';
+import { Globe2, BookOpen, Lightbulb } from 'lucide-react';
+import { CountryListPanel } from '../countries/CountryListPanel';
+import { PhrasebookPanel } from './PhrasebookPanel';
+import { CulturalTipsPanel } from './CulturalTipsPanel';
+
+type Tab = 'countries' | 'phrasebook' | 'culture';
+
+export function LeftDrawer() {
+  const [activeTab, setActiveTab] = useState<Tab | null>('countries');
+
+  const tabs: { id: Tab; icon: React.ReactNode; label: string }[] = [
+    { id: 'countries',  icon: <Globe2 className="w-5 h-5" />,     label: 'Countries'  },
+    { id: 'phrasebook', icon: <BookOpen className="w-5 h-5" />,   label: 'Phrases'    },
+    { id: 'culture',    icon: <Lightbulb className="w-5 h-5" />,  label: 'Culture'    },
+  ];
+
+  return (
+    <div className="flex h-full z-30 relative">
+      {/* Sliding content panel */}
+      <div
+        className={`overflow-hidden transition-all duration-500 ease-in-out ${
+          activeTab ? 'w-72 opacity-100' : 'w-0 opacity-0'
+        }`}
+      >
+        <div className="w-72 h-full bg-black/70 backdrop-blur-2xl border-r border-primary/20 flex flex-col overflow-hidden">
+          {activeTab === 'countries'  && <CountryListPanel />}
+          {activeTab === 'phrasebook' && <PhrasebookPanel />}
+          {activeTab === 'culture'    && <CulturalTipsPanel />}
+        </div>
+      </div>
+
+      {/* Vertical tab bar */}
+      <div className="flex flex-col items-center gap-1 py-4 px-1
+                      bg-black/60 backdrop-blur-xl border-r border-primary/20">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(prev => prev === tab.id ? null : tab.id)}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all group w-12
+              ${activeTab === tab.id
+                ? 'bg-primary/20 text-primary border border-primary/40'
+                : 'text-muted-foreground hover:text-primary hover:bg-white/5'
+              }`}
+            title={tab.label}
+          >
+            {tab.icon}
+            <span className="text-[8px] uppercase font-bold tracking-wider leading-none">
+              {tab.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+---FILE END---
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — CREATE PHRASEBOOK PANEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create src/components/left/PhrasebookPanel.tsx:
+
+---FILE START---
+import { useState } from 'react';
+import { BookOpen, Loader2, Volume2 } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
+import { getPhrasebook, type Phrase } from '../../services/aiFeatures';
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Greeting:   'bg-blue-500/20 text-blue-300',
+  Food:       'bg-orange-500/20 text-orange-300',
+  Navigation: 'bg-green-500/20 text-green-300',
+  Emergency:  'bg-red-500/20 text-red-300',
+  Shopping:   'bg-purple-500/20 text-purple-300',
+  Polite:     'bg-cyan-500/20 text-cyan-300',
+};
+
+export function PhrasebookPanel() {
+  const { selectedCountry, targetLang } = useAppStore();
+  const [phrases, setPhrases] = useState<Phrase[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [generated, setGenerated] = useState(false);
+
+  const handleGenerate = async () => {
+    if (!selectedCountry) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getPhrasebook(selectedCountry.name, targetLang);
+      setPhrases(result);
+      setGenerated(true);
+    } catch (e: any) {
+      setError(e.message ?? 'Failed to generate phrasebook');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const speak = (text: string, lang: string) => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    speechSynthesis.speak(u);
+  };
+
+  return (
+    <div className="flex flex-col h-full p-4 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4">
+        <BookOpen className="w-4 h-4 text-primary" />
+        <h3 className="text-sm font-bold uppercase tracking-widest text-primary/80">Phrasebook</h3>
+      </div>
+
+      {!selectedCountry ? (
+        <div className="flex-1 flex items-center justify-center text-center">
+          <p className="text-muted-foreground/50 text-xs">Select a country on the globe to generate phrases</p>
+        </div>
+      ) : (
+        <>
+          <div className="mb-3 p-3 rounded-xl bg-white/5 border border-white/10">
+            <p className="text-xs text-muted-foreground/60">Country</p>
+            <p className="text-sm font-bold text-primary">{selectedCountry.name}</p>
+            <p className="text-xs text-muted-foreground/50 mt-0.5">Language: {targetLang.toUpperCase()}</p>
+          </div>
+
+          {!generated && (
+            <button
+              onClick={handleGenerate}
+              disabled={loading}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-primary/80 to-cyan-400/80
+                         text-black text-sm font-bold uppercase tracking-wider
+                         hover:from-primary hover:to-cyan-400 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
+              {loading ? 'Generating...' : 'Generate Phrases'}
+            </button>
+          )}
+
+          {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+
+          <div className="flex-1 overflow-y-auto mt-3 space-y-2 hide-scrollbar">
+            {phrases.map((p, i) => (
+              <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-primary/20 transition-all">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase ${CATEGORY_COLORS[p.category] ?? 'bg-white/10 text-white/50'}`}>
+                    {p.category}
+                  </span>
+                  <button onClick={() => speak(p.translated, targetLang)} className="text-muted-foreground/50 hover:text-primary transition-colors">
+                    <Volume2 className="w-3 h-3" />
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground/70 mb-0.5">{p.english}</p>
+                <p className="text-sm font-bold text-primary">{p.translated}</p>
+                <p className="text-[10px] text-muted-foreground/40 italic mt-0.5">{p.phonetic}</p>
+              </div>
+            ))}
+            {generated && (
+              <button onClick={handleGenerate} disabled={loading}
+                className="w-full py-2 text-xs text-primary/60 hover:text-primary border border-white/5 hover:border-primary/20 rounded-xl transition-all">
+                Regenerate
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+---FILE END---
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7 — CREATE CULTURAL TIPS PANEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create src/components/left/CulturalTipsPanel.tsx:
+
+---FILE START---
+import { useState } from 'react';
+import { Lightbulb, Loader2, RefreshCw } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
+import { getCulturalTips, type CulturalTip } from '../../services/aiFeatures';
+
+export function CulturalTipsPanel() {
+  const { selectedCountry } = useAppStore();
+  const [tips, setTips] = useState<CulturalTip[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFetch = async () => {
+    if (!selectedCountry) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getCulturalTips(selectedCountry.name);
+      setTips(result);
+    } catch (e: any) {
+      setError(e.message ?? 'Failed to get tips');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full p-4 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4">
+        <Lightbulb className="w-4 h-4 text-primary" />
+        <h3 className="text-sm font-bold uppercase tracking-widest text-primary/80">Culture Guide</h3>
+      </div>
+
+      {!selectedCountry ? (
+        <div className="flex-1 flex items-center justify-center text-center">
+          <p className="text-muted-foreground/50 text-xs">Select a country on the globe to see cultural tips</p>
+        </div>
+      ) : (
+        <>
+          <div className="mb-3 p-3 rounded-xl bg-white/5 border border-white/10">
+            <p className="text-xs text-muted-foreground/60">Visiting</p>
+            <p className="text-sm font-bold text-primary">{selectedCountry.name}</p>
+          </div>
+
+          {tips.length === 0 && (
+            <button
+              onClick={handleFetch}
+              disabled={loading}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-yellow-500/70 to-primary/70
+                         text-black text-sm font-bold uppercase tracking-wider
+                         hover:from-yellow-400 hover:to-primary disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
+              {loading ? 'Loading...' : 'Get Cultural Tips'}
+            </button>
+          )}
+
+          {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+
+          <div className="flex-1 overflow-y-auto mt-3 space-y-2 hide-scrollbar">
+            {tips.map((tip, i) => (
+              <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-yellow-400/20 transition-all">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">{tip.icon}</span>
+                  <span className="text-xs font-bold text-yellow-300/80">{tip.title}</span>
+                </div>
+                <p className="text-xs text-muted-foreground/70 leading-relaxed">{tip.tip}</p>
+              </div>
+            ))}
+            {tips.length > 0 && (
+              <button onClick={handleFetch} disabled={loading}
+                className="w-full py-2 text-xs text-primary/60 hover:text-primary border border-white/5 hover:border-primary/20 rounded-xl transition-all flex items-center justify-center gap-1">
+                <RefreshCw className="w-3 h-3" /> Refresh
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+---FILE END---
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8 — CREATE WAYFINDER PANEL (right drawer, new tab)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create src/components/right/WayfinderPanel.tsx:
+
+---FILE START---
+import { useState } from 'react';
+import { MapPin, Search, Loader2, ExternalLink, Globe2 } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
+import { translateText } from '../../services/translation';
+
+const GOOGLE_KEY = import.meta.env.VITE_GOOGLE_PLACES_KEY as string;
+
+interface Place {
+  name: string;
+  nameTranslated: string;
+  address: string;
+  addressTranslated: string;
+  rating?: number;
+  types: string[];
+  lat: number;
+  lng: number;
+  placeId: string;
+}
+
+export function WayfinderPanel({ onFlyTo }: { onFlyTo: (lat: number, lng: number) => void }) {
+  const { selectedCountry, targetLang } = useAppStore();
+  const [query, setQuery] = useState('');
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+    if (!GOOGLE_KEY) {
+      setError('Google Places API key not configured. Add VITE_GOOGLE_PLACES_KEY to Replit Secrets.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const locationBias = selectedCountry?.name ?? '';
+      const searchQuery = locationBias ? `${query} in ${locationBias}` : query;
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${GOOGLE_KEY}`
+      );
+      const data = await res.json();
+      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') throw new Error(data.error_message ?? data.status);
+
+      const results: Place[] = await Promise.all(
+        (data.results ?? []).slice(0, 6).map(async (p: any) => {
+          let nameTranslated = p.name;
+          let addressTranslated = p.formatted_address ?? '';
+          if (targetLang !== 'en') {
+            try {
+              const [nt, at] = await Promise.all([
+                translateText(p.name, 'en', targetLang),
+                translateText(p.formatted_address ?? '', 'en', targetLang),
+              ]);
+              nameTranslated = nt.translated;
+              addressTranslated = at.translated;
+            } catch {}
+          }
+          return {
+            name: p.name,
+            nameTranslated,
+            address: p.formatted_address ?? '',
+            addressTranslated,
+            rating: p.rating,
+            types: p.types?.slice(0, 2) ?? [],
+            lat: p.geometry?.location?.lat ?? 0,
+            lng: p.geometry?.location?.lng ?? 0,
+            placeId: p.place_id,
+          };
+        })
+      );
+      setPlaces(results);
+    } catch (e: any) {
+      setError(e.message ?? 'Search failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full p-4 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4">
+        <MapPin className="w-4 h-4 text-primary" />
+        <h3 className="text-sm font-bold uppercase tracking-widest text-primary/80">Wayfinder</h3>
+      </div>
+      <p className="text-xs text-muted-foreground/50 mb-3">
+        Search places, addresses and landmarks. Results translated to {targetLang.toUpperCase()}.
+      </p>
+
+      {/* Search input */}
+      <div className="relative mb-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          placeholder={selectedCountry ? `Search in ${selectedCountry.name}...` : 'Search any place...'}
+          className="w-full bg-white/5 border border-white/10 focus:border-primary/50 rounded-xl
+                     pl-9 pr-3 py-2.5 text-sm outline-none transition-all"
+        />
+      </div>
+
+      <button
+        onClick={handleSearch}
+        disabled={loading || !query.trim()}
+        className="w-full py-2.5 mb-3 rounded-xl bg-gradient-to-r from-primary/80 to-cyan-400/80
+                   text-black text-sm font-bold uppercase tracking-wider
+                   hover:from-primary hover:to-cyan-400 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+      >
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+        {loading ? 'Searching...' : 'Find Places'}
+      </button>
+
+      {error && (
+        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 mb-3">
+          <p className="text-red-400 text-xs">{error}</p>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto space-y-2 hide-scrollbar">
+        {places.map((p, i) => (
+          <div key={i}
+            className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-primary/30 transition-all cursor-pointer group"
+            onClick={() => onFlyTo(p.lat, p.lng)}
+          >
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-primary truncate">{p.nameTranslated}</p>
+                {p.nameTranslated !== p.name && (
+                  <p className="text-[10px] text-muted-foreground/40 truncate">{p.name}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {p.rating && (
+                  <span className="text-[10px] text-yellow-400 font-bold">★ {p.rating}</span>
+                )}
+                <a
+                  href={`https://www.google.com/maps/place/?q=place_id:${p.placeId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="text-muted-foreground/40 hover:text-primary transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground/50 leading-relaxed">{p.addressTranslated}</p>
+            <div className="flex items-center gap-1 mt-1.5">
+              <Globe2 className="w-2.5 h-2.5 text-primary/40" />
+              <span className="text-[9px] text-primary/40 uppercase tracking-wider">Tap to fly to location</span>
+            </div>
+          </div>
+        ))}
+        {places.length === 0 && !loading && !error && (
+          <div className="flex-1 flex items-center justify-center text-center py-8">
+            <p className="text-muted-foreground/30 text-xs">Search for hospitals, restaurants,<br/>hotels, landmarks and more</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+---FILE END---
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 9 — UPDATE App.tsx TO USE NEW PANELS + WAYFINDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Replace the entire contents of src/App.tsx:
+
+---FILE START---
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { GlobeView } from "./components/globe/GlobeView";
+import { TranslationPanel } from "./components/translation/TranslationPanel";
+import { LeftDrawer } from "./components/left/LeftDrawer";
+import { WayfinderPanel } from "./components/right/WayfinderPanel";
+import { useState, useRef } from "react";
+import { Languages, MapPin, ChevronRight } from "lucide-react";
+
+type RightTab = 'translate' | 'wayfinder' | null;
+
+function TalkAtlasApp() {
+  const [rightTab, setRightTab] = useState<RightTab>(null);
+  const globeRef = useRef<any>(null);
+
+  const handleFlyTo = (lat: number, lng: number) => {
+    if (globeRef.current) {
+      globeRef.current.pointOfView({ lat, lng, altitude: 1.5 }, 1500);
+    }
+  };
+
+  const rightTabs = [
+    { id: 'translate' as RightTab, icon: <Languages className="w-5 h-5" />, label: 'Translate' },
+    { id: 'wayfinder' as RightTab, icon: <MapPin className="w-5 h-5" />,    label: 'Wayfinder' },
+  ];
+
+  return (
+    <div
+      className="flex h-screen w-full bg-[#020202] text-white overflow-hidden relative"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {/* Left: drawer with Countries, Phrasebook, Culture tabs */}
+      <LeftDrawer />
+
+      {/* Centre: full-screen globe */}
+      <div className="flex-1 relative min-w-0">
+        <GlobeView globeRef={globeRef} />
+      </div>
+
+      {/* Right: sliding drawer with Translate + Wayfinder tabs */}
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-stretch z-30">
+
+        {/* Sliding panel content */}
+        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${rightTab ? 'w-[400px] opacity-100' : 'w-0 opacity-0'}`}>
+          <div className="w-[400px] h-full bg-black/70 backdrop-blur-2xl border-l border-primary/20 flex flex-col justify-start overflow-y-auto">
+            {rightTab === 'translate' && (
+              <div className="p-4">
+                <TranslationPanel />
+              </div>
+            )}
+            {rightTab === 'wayfinder' && (
+              <WayfinderPanel onFlyTo={handleFlyTo} />
+            )}
+          </div>
+        </div>
+
+        {/* Vertical tab buttons */}
+        <div className="flex flex-col items-center gap-1 py-4 px-1 bg-black/60 backdrop-blur-xl border-l border-primary/20">
+          {rightTabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setRightTab(prev => prev === tab.id ? null : tab.id)}
+              className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all group w-12
+                ${rightTab === tab.id
+                  ? 'bg-primary/20 text-primary border border-primary/40'
+                  : 'text-muted-foreground hover:text-primary hover:bg-white/5'
+                }`}
+              title={tab.label ?? ''}
+            >
+              {tab.icon}
+              <span className="text-[8px] uppercase font-bold tracking-wider leading-none">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <TalkAtlasApp />
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+---FILE END---
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 10 — UPDATE GlobeView TO ACCEPT globeRef PROP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In src/components/globe/GlobeView.tsx:
+
+1. Change the function signature from:
+   export function GlobeView() {
+   to:
+   export function GlobeView({ globeRef }: { globeRef?: React.RefObject<any> }) {
+
+2. Change the internal ref from:
+   const globeEl = useRef<any>(null);
+   to:
+   const globeEl = globeRef ?? useRef<any>(null);
+
+3. In the third useEffect (autoRotate), add the renderer transparency fix:
+   const internalRenderer = globeEl.current?.renderer?.();
+   if (internalRenderer) {
+     internalRenderer.setClearColor(0x000000, 0);
+   }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL RULES — DO NOT BREAK THESE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Do NOT change src/store/useAppStore.ts
+2. Do NOT change src/data/ folder
+3. Do NOT change src/hooks/useSpeechToText.ts
+4. Keep ALL existing data-testid attributes
+5. Keep ALL existing CSS classes (glass-panel, neon-text, etc.)
+6. Translation must still work with NO keys via MyMemory fallback
+7. WayfinderPanel must show a clear message if VITE_GOOGLE_PLACES_KEY is missing
+8. All Capacitor imports must stay guarded with isNativePlatform() checks
+9. CountryListPanel must still work exactly as before inside LeftDrawer
+
+=====================================================================
+END OF PROMPT
+=====================================================================

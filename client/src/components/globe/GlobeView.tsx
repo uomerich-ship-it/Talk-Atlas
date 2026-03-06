@@ -13,8 +13,9 @@ function isWebGLAvailable(): boolean {
   }
 }
 
-export function GlobeView() {
-  const globeEl = useRef<any>(null);
+export function GlobeView({ globeRef }: { globeRef?: React.RefObject<any> }) {
+  const internalRef = useRef<any>(null);
+  const globeEl = globeRef ?? internalRef;
   const { setCountries, selectedCountry, setSelectedCountry } = useAppStore();
   const [geoData, setGeoData] = useState<any>(null);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
@@ -47,6 +48,12 @@ export function GlobeView() {
       globeEl.current.controls().autoRotate = true;
       globeEl.current.controls().autoRotateSpeed = 0.3;
       globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.2 });
+
+      const internalRenderer = globeEl.current?.renderer?.();
+      if (internalRenderer) {
+        internalRenderer.setClearColor(0x000000, 0);
+        internalRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      }
     }
   }, []);
 
@@ -99,7 +106,7 @@ export function GlobeView() {
           
           atmosphereColor="rgba(0, 180, 255, 1)"
           atmosphereAltitude={0.18}
-          rendererConfig={{ antialias: true, alpha: true }}
+          rendererConfig={{ antialias: true, alpha: true, clearColor: 0x000000, clearAlpha: 0 }}
           
           labelsData={hoveredCountry ? [{ name: hoveredCountry }] : []}
           labelText={() => hoveredCountry || ''}
