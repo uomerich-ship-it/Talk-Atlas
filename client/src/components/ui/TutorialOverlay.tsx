@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TutorialOverlayProps {
@@ -101,10 +102,11 @@ export function TutorialOverlay({ onClose }: TutorialOverlayProps) {
     >
       <button
         onClick={handleFinish}
-        className="fixed top-6 right-6 z-[70] text-muted-foreground/50 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors"
+        className="fixed top-6 right-6 z-[70] p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 text-white/70 hover:text-white transition-all backdrop-blur-sm"
+        title="Close tutorial"
         data-testid="button-skip-tutorial"
       >
-        Skip tutorial
+        <X className="w-5 h-5" />
       </button>
 
       <AnimatePresence mode="wait">

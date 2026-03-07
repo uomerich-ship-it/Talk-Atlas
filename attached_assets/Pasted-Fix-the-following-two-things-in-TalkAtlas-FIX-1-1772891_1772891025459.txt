@@ -1,0 +1,116 @@
+Fix the following two things in TalkAtlas:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 1 — ABOUT MODAL TEXT BRIGHTNESS + HOVER EFFECTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In src/components/ui/AboutModal.tsx make these changes:
+
+1. All body/description text that currently uses 
+   text-muted-foreground change to text-white/75
+   so it is visibly brighter and easier to read
+
+2. All feature cards (the 2-column grid) add hover effects:
+   - Change card className to include:
+     hover:bg-white/10 hover:border-primary/30 
+     hover:shadow-[0_0_20px_rgba(0,255,255,0.08)]
+     transition-all duration-300 cursor-default
+   - On hover the card title (bold text) should brighten:
+     group-hover:text-primary transition-colors
+     (add group class to the card div)
+   - On hover the emoji icon scales up slightly:
+     group-hover:scale-110 transition-transform duration-300
+     (add this to the emoji/icon element)
+
+3. The "Powered by" tech badges at the bottom:
+   Change opacity from whatever it is now to full opacity
+   and add hover:text-primary hover:border-primary/40 
+   transition-colors to each badge
+
+4. Section headings like "What is TalkAtlas?", "Features",
+   "How it Works", "Premium" — make sure they use 
+   text-primary (cyan) and are clearly visible
+
+5. The "Made with ❤️" footer text:
+   Change to text-white/60 (brighter than before)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 2 — TUTORIAL IMPROVEMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In src/components/ui/TutorialOverlay.tsx make these changes:
+
+1. FIX FIRST LAUNCH ONLY — the tutorial must only show
+   automatically on the very first time the app is opened
+   after install. It must NEVER show again automatically.
+   
+   Update the localStorage check in App.tsx:
+   
+   useEffect(() => {
+     const seen = localStorage.getItem('talkAtlas_tutorial_seen');
+     if (!seen) {
+       setTimeout(() => setShowTutorial(true), 1500);
+       localStorage.setItem('talkAtlas_tutorial_seen', 'true');
+     }
+   }, []);
+   
+   Note: set the localStorage item IMMEDIATELY when the
+   app first loads — not just when tutorial is completed.
+   This prevents it showing again if user closes the browser
+   mid-tutorial.
+
+2. ADD VISIBLE CLOSE BUTTON (X) — add a clear close button
+   in the TOP RIGHT corner of the tutorial overlay:
+   
+   <button
+     onClick={onClose}
+     className="fixed top-6 right-6 z-50 p-2 rounded-full
+                bg-white/10 hover:bg-white/20 border border-white/20
+                hover:border-white/40 text-white/70 hover:text-white
+                transition-all backdrop-blur-sm"
+     title="Close tutorial"
+   >
+     <X className="w-5 h-5" />
+   </button>
+   
+   Import X from lucide-react if not already imported.
+
+3. ADD TUTORIAL SECTION IN ABOUT MODAL — in 
+   src/components/ui/AboutModal.tsx add a new section
+   between the Features section and the Premium section:
+
+   Section title: "How to Use TalkAtlas"
+   
+   Show a styled button:
+   <button
+     onClick={onOpenTutorial}
+     className="w-full flex items-center justify-between
+                p-4 rounded-2xl bg-white/5 border border-white/10
+                hover:bg-white/10 hover:border-primary/30
+                transition-all group"
+   >
+     <div className="flex items-center gap-3">
+       <span className="text-2xl">🎓</span>
+       <div className="text-left">
+         <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">
+           Watch the Tutorial
+         </p>
+         <p className="text-xs text-white/50">
+           A quick 6-step guide to all features
+         </p>
+       </div>
+     </div>
+     <ChevronRight className="w-4 h-4 text-muted-foreground 
+                              group-hover:text-primary transition-colors" />
+   </button>
+   
+   Import ChevronRight from lucide-react if not already imported.
+   This button calls onOpenTutorial() which closes the About
+   modal and opens the Tutorial overlay.
+
+CRITICAL RULES:
+- Do not change any other part of the app
+- Do not change useAppStore.ts
+- Keep all existing styling and class names
+- The tutorial close (X) button must work at every step
+  including step 1

@@ -23,6 +23,7 @@ function TalkAtlasApp() {
   useEffect(() => {
     const seen = localStorage.getItem('talkAtlas_tutorial_seen');
     if (!seen) {
+      localStorage.setItem('talkAtlas_tutorial_seen', 'true');
       setTimeout(() => setShowTutorial(true), 1500);
     }
   }, []);
