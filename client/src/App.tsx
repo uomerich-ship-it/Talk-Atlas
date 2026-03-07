@@ -34,7 +34,7 @@ function TalkAtlasApp() {
       <LeftDrawer />
 
       <div className="flex-1 relative min-w-0">
-        <GlobeView globeRef={globeRef} />
+        <GlobeView ref={globeRef} />
       </div>
 
       <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-stretch z-30">
@@ -46,7 +46,7 @@ function TalkAtlasApp() {
               </div>
             )}
             {rightTab === 'wayfinder' && (
-              <WayfinderPanel onFlyTo={handleFlyTo} />
+              <WayfinderPanel onFlyTo={handleFlyTo} globeRef={globeRef} />
             )}
           </div>
         </div>

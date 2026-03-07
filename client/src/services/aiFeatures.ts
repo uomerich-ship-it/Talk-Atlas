@@ -1,22 +1,41 @@
 const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string;
 
-async function openAIChat(systemPrompt: string, userPrompt: string, model = 'gpt-4o-mini'): Promise<string> {
+async function openAIChat(
+  systemPrompt: string,
+  userPrompt: string,
+  model = 'gpt-3.5-turbo'
+): Promise<string> {
   if (!OPENAI_KEY) throw new Error('OpenAI API key not configured');
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${OPENAI_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      max_tokens: 1000,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-    }),
-  });
-  if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() ?? '';
+
+  const makeRequest = async (retries = 2): Promise<string> => {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1000,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+    });
+
+    if (res.status === 429 && retries > 0) {
+      const delay = Math.pow(2, 3 - retries) * 1000;
+      await new Promise(r => setTimeout(r, delay));
+      return makeRequest(retries - 1);
+    }
+
+    if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() ?? '';
+  };
+
+  return makeRequest();
 }
 
 export interface Phrase {

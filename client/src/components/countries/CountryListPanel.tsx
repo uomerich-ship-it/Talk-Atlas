@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { Search, Globe, Star, Clock, ChevronRight, Crown, Loader2 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
@@ -20,6 +20,36 @@ import {
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
 
+const getFlagEmoji = (countryName: string): string => {
+  const flagMap: Record<string, string> = {
+    'Afghanistan':'\u{1F1E6}\u{1F1EB}','Albania':'\u{1F1E6}\u{1F1F1}','Algeria':'\u{1F1E9}\u{1F1FF}','Argentina':'\u{1F1E6}\u{1F1F7}',
+    'Australia':'\u{1F1E6}\u{1F1FA}','Austria':'\u{1F1E6}\u{1F1F9}','Bangladesh':'\u{1F1E7}\u{1F1E9}','Belgium':'\u{1F1E7}\u{1F1EA}',
+    'Bolivia':'\u{1F1E7}\u{1F1F4}','Brazil':'\u{1F1E7}\u{1F1F7}','Bulgaria':'\u{1F1E7}\u{1F1EC}','Cambodia':'\u{1F1F0}\u{1F1ED}',
+    'Canada':'\u{1F1E8}\u{1F1E6}','Chile':'\u{1F1E8}\u{1F1F1}','China':'\u{1F1E8}\u{1F1F3}','Colombia':'\u{1F1E8}\u{1F1F4}',
+    'Croatia':'\u{1F1ED}\u{1F1F7}','Cuba':'\u{1F1E8}\u{1F1FA}','Czech Republic':'\u{1F1E8}\u{1F1FF}','Denmark':'\u{1F1E9}\u{1F1F0}',
+    'Ecuador':'\u{1F1EA}\u{1F1E8}','Egypt':'\u{1F1EA}\u{1F1EC}','Ethiopia':'\u{1F1EA}\u{1F1F9}','Finland':'\u{1F1EB}\u{1F1EE}',
+    'France':'\u{1F1EB}\u{1F1F7}','Germany':'\u{1F1E9}\u{1F1EA}','Ghana':'\u{1F1EC}\u{1F1ED}','Greece':'\u{1F1EC}\u{1F1F7}',
+    'Guatemala':'\u{1F1EC}\u{1F1F9}','Honduras':'\u{1F1ED}\u{1F1F3}','Hungary':'\u{1F1ED}\u{1F1FA}','India':'\u{1F1EE}\u{1F1F3}',
+    'Indonesia':'\u{1F1EE}\u{1F1E9}','Iran':'\u{1F1EE}\u{1F1F7}','Iraq':'\u{1F1EE}\u{1F1F6}','Ireland':'\u{1F1EE}\u{1F1EA}',
+    'Israel':'\u{1F1EE}\u{1F1F1}','Italy':'\u{1F1EE}\u{1F1F9}','Jamaica':'\u{1F1EF}\u{1F1F2}','Japan':'\u{1F1EF}\u{1F1F5}',
+    'Jordan':'\u{1F1EF}\u{1F1F4}','Kenya':'\u{1F1F0}\u{1F1EA}','South Korea':'\u{1F1F0}\u{1F1F7}','Kuwait':'\u{1F1F0}\u{1F1FC}',
+    'Lebanon':'\u{1F1F1}\u{1F1E7}','Libya':'\u{1F1F1}\u{1F1FE}','Malaysia':'\u{1F1F2}\u{1F1FE}','Mexico':'\u{1F1F2}\u{1F1FD}',
+    'Morocco':'\u{1F1F2}\u{1F1E6}','Mozambique':'\u{1F1F2}\u{1F1FF}','Myanmar':'\u{1F1F2}\u{1F1F2}','Nepal':'\u{1F1F3}\u{1F1F5}',
+    'Netherlands':'\u{1F1F3}\u{1F1F1}','New Zealand':'\u{1F1F3}\u{1F1FF}','Nigeria':'\u{1F1F3}\u{1F1EC}','Norway':'\u{1F1F3}\u{1F1F4}',
+    'Pakistan':'\u{1F1F5}\u{1F1F0}','Panama':'\u{1F1F5}\u{1F1E6}','Paraguay':'\u{1F1F5}\u{1F1FE}','Peru':'\u{1F1F5}\u{1F1EA}',
+    'Philippines':'\u{1F1F5}\u{1F1ED}','Poland':'\u{1F1F5}\u{1F1F1}','Portugal':'\u{1F1F5}\u{1F1F9}','Qatar':'\u{1F1F6}\u{1F1E6}',
+    'Romania':'\u{1F1F7}\u{1F1F4}','Russia':'\u{1F1F7}\u{1F1FA}','Saudi Arabia':'\u{1F1F8}\u{1F1E6}','Senegal':'\u{1F1F8}\u{1F1F3}',
+    'Serbia':'\u{1F1F7}\u{1F1F8}','Singapore':'\u{1F1F8}\u{1F1EC}','Somalia':'\u{1F1F8}\u{1F1F4}','South Africa':'\u{1F1FF}\u{1F1E6}',
+    'Spain':'\u{1F1EA}\u{1F1F8}','Sri Lanka':'\u{1F1F1}\u{1F1F0}','Sudan':'\u{1F1F8}\u{1F1E9}','Sweden':'\u{1F1F8}\u{1F1EA}',
+    'Switzerland':'\u{1F1E8}\u{1F1ED}','Syria':'\u{1F1F8}\u{1F1FE}','Taiwan':'\u{1F1F9}\u{1F1FC}','Tanzania':'\u{1F1F9}\u{1F1FF}',
+    'Thailand':'\u{1F1F9}\u{1F1ED}','Tunisia':'\u{1F1F9}\u{1F1F3}','Turkey':'\u{1F1F9}\u{1F1F7}','Uganda':'\u{1F1FA}\u{1F1EC}',
+    'Ukraine':'\u{1F1FA}\u{1F1E6}','United Arab Emirates':'\u{1F1E6}\u{1F1EA}','United Kingdom':'\u{1F1EC}\u{1F1E7}',
+    'United States of America':'\u{1F1FA}\u{1F1F8}','Uruguay':'\u{1F1FA}\u{1F1FE}','Venezuela':'\u{1F1FB}\u{1F1EA}',
+    'Vietnam':'\u{1F1FB}\u{1F1F3}','Yemen':'\u{1F1FE}\u{1F1EA}','Zambia':'\u{1F1FF}\u{1F1F2}','Zimbabwe':'\u{1F1FF}\u{1F1FC}',
+  };
+  return flagMap[countryName] ?? '\u{1F310}';
+};
+
 export function CountryListPanel() {
   const { 
     countries, 
@@ -38,6 +68,37 @@ export function CountryListPanel() {
   const [sortBy, setSortBy] = useState<'name' | 'languages'>('name');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const { toast } = useToast();
+
+  const [countryInfo, setCountryInfo] = useState<{
+    population: number;
+    capital: string;
+  } | null>(null);
+  const [loadingInfo, setLoadingInfo] = useState(false);
+  const infoCache = useRef<Record<string, { population: number; capital: string }>>({});
+
+  useEffect(() => {
+    if (!selectedCountry) return;
+    const name = selectedCountry.name;
+    if (infoCache.current[name]) {
+      setCountryInfo(infoCache.current[name]);
+      return;
+    }
+    setLoadingInfo(true);
+    fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(name)}?fields=population,capital`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data[0]) {
+          const info = {
+            population: data[0].population ?? 0,
+            capital: data[0].capital?.[0] ?? '',
+          };
+          infoCache.current[name] = info;
+          setCountryInfo(info);
+        }
+      })
+      .catch(() => setCountryInfo(null))
+      .finally(() => setLoadingInfo(false));
+  }, [selectedCountry]);
 
   const handlePremiumCheckout = async () => {
     setCheckoutLoading(true);
@@ -83,7 +144,10 @@ export function CountryListPanel() {
         className="flex-1 text-left p-1.5"
       >
         <div className="flex justify-between items-center">
-          <span className="font-medium text-sm">{country.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{getFlagEmoji(country.name)}</span>
+            <span className="font-medium text-sm">{country.name}</span>
+          </div>
           {country.languageCount > 1 && (
             <span className="text-[10px] text-muted-foreground/60 px-1.5 py-0.5 rounded-full bg-white/5">
               {country.languageCount}
@@ -106,7 +170,42 @@ export function CountryListPanel() {
       <div className="space-y-3 mb-4">
         {selectedCountry && (
           <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 animate-in fade-in slide-in-from-top-2">
-            <p className="text-[10px] uppercase font-bold text-primary/60 mb-2 tracking-widest">Quick Actions</p>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-3xl">{getFlagEmoji(selectedCountry.name)}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-primary truncate">{selectedCountry.name}</p>
+                {loadingInfo ? (
+                  <div className="space-y-1 mt-1">
+                    <div className="h-3 w-28 bg-white/10 rounded animate-pulse" />
+                    <div className="h-3 w-24 bg-white/10 rounded animate-pulse" />
+                  </div>
+                ) : countryInfo ? (
+                  <div className="space-y-0.5 mt-1">
+                    {countryInfo.capital && (
+                      <p className="text-[10px] text-muted-foreground/60">
+                        {'\u{1F3D9}\u{FE0F}'} Capital: {countryInfo.capital}
+                      </p>
+                    )}
+                    {countryInfo.population > 0 && (
+                      <p className="text-[10px] text-muted-foreground/60">
+                        {'\u{1F465}'} Population: {countryInfo.population.toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {selectedCountry.languages.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {selectedCountry.languages.map((lang: string) => (
+                  <span key={lang} className="text-[9px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 font-bold uppercase tracking-wider">
+                    {lang}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {selectedCountry.languages.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">No language data available</p>
             ) : (

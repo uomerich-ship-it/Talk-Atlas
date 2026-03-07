@@ -1,0 +1,359 @@
+=====================================================================
+TALKATLAS — COMBINED PROMPT (Changes 1-5 + Population)
+Paste this entire file into Replit AI in ONE go.
+Do every change in order. Do not skip any section.
+=====================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 1 — FIX OpenAI RATE LIMITING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In src/services/aiFeatures.ts, update the openAIChat function
+to use 'gpt-3.5-turbo' instead of 'gpt-4o-mini' as the default
+model, and add retry logic with exponential backoff:
+
+async function openAIChat(
+  systemPrompt: string,
+  userPrompt: string,
+  model = 'gpt-3.5-turbo'
+): Promise<string> {
+  if (!OPENAI_KEY) throw new Error('OpenAI API key not configured');
+
+  const makeRequest = async (retries = 2): Promise<string> => {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1000,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+    });
+
+    if (res.status === 429 && retries > 0) {
+      await new Promise(r => setTimeout(r, 2000));
+      return makeRequest(retries - 1);
+    }
+
+    if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() ?? '';
+  };
+
+  return makeRequest();
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 2 — MERGE FIND PLACES INTO DIRECTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Remove the Find Places / Directions tab switcher entirely.
+Replace with ONE unified panel called "Wayfinder" that works
+like this:
+
+TOP SECTION — Place Search (always visible):
+- Search input with placeholder "Search places, landmarks, addresses..."
+- "Search" button
+- Results appear as clickable cards below the search
+- Each result card shows: name (translated), address (translated),
+  rating stars if available
+- Each card has three buttons:
+  * "📍 Fly Here" — flies the globe to that location
+  * "🗺️ Directions" — auto-fills that place as the DESTINATION
+    in the directions section below and scrolls down to it
+  * "🪟 Street View" — opens street view panel (see Change 4)
+
+BOTTOM SECTION — Directions (collapsible, expands when
+destination is set or user clicks to expand):
+- Shows a chevron/arrow to expand/collapse
+- Title: "Get Directions"
+- Origin input: "Starting point..."
+- Destination input: pre-filled when user clicks "Directions"
+  from a search result, or can type manually
+- Swap button between origin and destination
+- 4 travel mode buttons: 🚗 Drive  🚶 Walk  🚌 Transit  🚲 Bike
+- "Get Directions" button
+- Results: distance, duration, numbered translated steps
+
+Both sections use the existing /api/places/search and
+/api/directions server proxy routes.
+Keep all existing styling (cyan primary, glass-panel, etc.)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 3 — DRAW ROUTE LINE ON GLOBE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When directions are successfully fetched, draw an animated
+arc line on the globe between origin and destination.
+
+In src/components/globe/GlobeView.tsx:
+
+1. Add routeArc state:
+   const [routeArc, setRouteArc] = useState<any[]>([]);
+
+2. Import useImperativeHandle and forwardRef.
+   Wrap GlobeView with forwardRef so the ref works properly.
+   Expose these functions via the ref:
+
+   useImperativeHandle(globeRef, () => ({
+     pointOfView: (pov: any, ms: number) =>
+       globeEl.current?.pointOfView(pov, ms),
+     setRoute: (
+       startLat: number,
+       startLng: number,
+       endLat: number,
+       endLng: number
+     ) => {
+       setRouteArc([{ startLat, startLng, endLat, endLng }]);
+       const midLat = (startLat + endLat) / 2;
+       const midLng = (startLng + endLng) / 2;
+       globeEl.current?.pointOfView(
+         { lat: midLat, lng: midLng, altitude: 2.5 },
+         2000
+       );
+     },
+     clearRoute: () => setRouteArc([]),
+   }));
+
+3. Add arcsData props to GlobeTGL:
+   arcsData={routeArc}
+   arcColor={() => '#00FFFF'}
+   arcAltitude={0.3}
+   arcStroke={1.5}
+   arcDashLength={0.4}
+   arcDashGap={0.2}
+   arcDashAnimateTime={2000}
+
+4. In WayfinderPanel, after directions are fetched successfully:
+   - Geocode origin using GET /api/places/search?query={origin}
+     → get lat/lng from first result
+   - Geocode destination using GET /api/places/search?query={destination}
+     → get lat/lng from first result
+   - Then call globeRef.current?.setRoute(
+       originLat, originLng, destLat, destLng
+     )
+   - Pass globeRef down from App.tsx to WayfinderPanel as a prop
+   - When directions panel is cleared or closed, call
+     globeRef.current?.clearRoute()
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 4 — STREET VIEW PANEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create src/components/right/StreetViewPanel.tsx:
+
+---FILE START---
+import { X, Camera } from 'lucide-react';
+
+interface StreetViewPanelProps {
+  lat: number;
+  lng: number;
+  placeName: string;
+  onClose: () => void;
+}
+
+export function StreetViewPanel({
+  lat,
+  lng,
+  placeName,
+  onClose,
+}: StreetViewPanelProps) {
+  const GOOGLE_KEY = import.meta.env.VITE_GOOGLE_PLACES_KEY as string;
+  const streetViewUrl = `https://www.google.com/maps/embed/v1/streetview?key=${GOOGLE_KEY}&location=${lat},${lng}&heading=0&pitch=0&fov=90`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="relative w-full max-w-3xl mx-4 rounded-2xl overflow-hidden border border-primary/30 shadow-2xl">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-black/90 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <Camera className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold text-primary uppercase tracking-wider">
+              Street View
+            </span>
+            <span className="text-xs text-muted-foreground/60 ml-1">
+              — {placeName}
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Street View iframe */}
+        <div className="relative" style={{ paddingBottom: '56.25%' }}>
+          <iframe
+            src={streetViewUrl}
+            className="absolute inset-0 w-full h-full"
+            frameBorder="0"
+            allowFullScreen
+            title={`Street View — ${placeName}`}
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-2 bg-black/90 border-t border-white/10">
+          <p className="text-[10px] text-muted-foreground/40">
+            Drag to look around · Scroll to zoom · Click arrows to move
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+---FILE END---
+
+In WayfinderPanel.tsx add:
+
+1. Import StreetViewPanel at the top:
+   import { StreetViewPanel } from './StreetViewPanel';
+
+2. Add state at the top of the component:
+   const [streetView, setStreetView] = useState<{
+     lat: number;
+     lng: number;
+     name: string;
+   } | null>(null);
+
+3. On the Street View button in each place result card:
+   onClick={() => setStreetView({
+     lat: place.lat,
+     lng: place.lng,
+     name: place.name
+   })}
+
+4. At the bottom of the WayfinderPanel return statement,
+   just before the closing </div>, add:
+   {streetView && (
+     <StreetViewPanel
+       lat={streetView.lat}
+       lng={streetView.lng}
+       placeName={streetView.name}
+       onClose={() => setStreetView(null)}
+     />
+   )}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 5 — IMPROVE COUNTRIES LEFT PANEL
+WITH FLAG, CAPITAL, LANGUAGES, AND POPULATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Update src/components/countries/CountryListPanel.tsx with
+all of the following improvements:
+
+A) ADD FLAG EMOJI HELPER FUNCTION at the top of the file:
+
+const getFlagEmoji = (countryName: string): string => {
+  const flagMap: Record<string, string> = {
+    'Afghanistan':'🇦🇫','Albania':'🇦🇱','Algeria':'🇩🇿','Argentina':'🇦🇷',
+    'Australia':'🇦🇺','Austria':'🇦🇹','Bangladesh':'🇧🇩','Belgium':'🇧🇪',
+    'Bolivia':'🇧🇴','Brazil':'🇧🇷','Bulgaria':'🇧🇬','Cambodia':'🇰🇭',
+    'Canada':'🇨🇦','Chile':'🇨🇱','China':'🇨🇳','Colombia':'🇨🇴',
+    'Croatia':'🇭🇷','Cuba':'🇨🇺','Czech Republic':'🇨🇿','Denmark':'🇩🇰',
+    'Ecuador':'🇪🇨','Egypt':'🇪🇬','Ethiopia':'🇪🇹','Finland':'🇫🇮',
+    'France':'🇫🇷','Germany':'🇩🇪','Ghana':'🇬🇭','Greece':'🇬🇷',
+    'Guatemala':'🇬🇹','Honduras':'🇭🇳','Hungary':'🇭🇺','India':'🇮🇳',
+    'Indonesia':'🇮🇩','Iran':'🇮🇷','Iraq':'🇮🇶','Ireland':'🇮🇪',
+    'Israel':'🇮🇱','Italy':'🇮🇹','Jamaica':'🇯🇲','Japan':'🇯🇵',
+    'Jordan':'🇯🇴','Kenya':'🇰🇪','South Korea':'🇰🇷','Kuwait':'🇰🇼',
+    'Lebanon':'🇱🇧','Libya':'🇱🇾','Malaysia':'🇲🇾','Mexico':'🇲🇽',
+    'Morocco':'🇲🇦','Mozambique':'🇲🇿','Myanmar':'🇲🇲','Nepal':'🇳🇵',
+    'Netherlands':'🇳🇱','New Zealand':'🇳🇿','Nigeria':'🇳🇬','Norway':'🇳🇴',
+    'Pakistan':'🇵🇰','Panama':'🇵🇦','Paraguay':'🇵🇾','Peru':'🇵🇪',
+    'Philippines':'🇵🇭','Poland':'🇵🇱','Portugal':'🇵🇹','Qatar':'🇶🇦',
+    'Romania':'🇷🇴','Russia':'🇷🇺','Saudi Arabia':'🇸🇦','Senegal':'🇸🇳',
+    'Serbia':'🇷🇸','Singapore':'🇸🇬','Somalia':'🇸🇴','South Africa':'🇿🇦',
+    'Spain':'🇪🇸','Sri Lanka':'🇱🇰','Sudan':'🇸🇩','Sweden':'🇸🇪',
+    'Switzerland':'🇨🇭','Syria':'🇸🇾','Taiwan':'🇹🇼','Tanzania':'🇹🇿',
+    'Thailand':'🇹🇭','Tunisia':'🇹🇳','Turkey':'🇹🇷','Uganda':'🇺🇬',
+    'Ukraine':'🇺🇦','United Arab Emirates':'🇦🇪','United Kingdom':'🇬🇧',
+    'United States of America':'🇺🇸','Uruguay':'🇺🇾','Venezuela':'🇻🇪',
+    'Vietnam':'🇻🇳','Yemen':'🇾🇪','Zambia':'🇿🇲','Zimbabwe':'🇿🇼',
+  };
+  return flagMap[countryName] ?? '🌐';
+};
+
+B) ADD COUNTRY INFO FETCH HOOK inside the component:
+
+const [countryInfo, setCountryInfo] = useState<{
+  population: number;
+  capital: string;
+} | null>(null);
+const [loadingInfo, setLoadingInfo] = useState(false);
+const infoCache = useRef<Record<string, { population: number; capital: string }>>({});
+
+useEffect(() => {
+  if (!selectedCountry) return;
+  const name = selectedCountry.name;
+  if (infoCache.current[name]) {
+    setCountryInfo(infoCache.current[name]);
+    return;
+  }
+  setLoadingInfo(true);
+  fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(name)}?fields=population,capital`)
+    .then(r => r.json())
+    .then(data => {
+      if (Array.isArray(data) && data[0]) {
+        const info = {
+          population: data[0].population ?? 0,
+          capital: data[0].capital?.[0] ?? '',
+        };
+        infoCache.current[name] = info;
+        setCountryInfo(info);
+      }
+    })
+    .catch(() => setCountryInfo(null))
+    .finally(() => setLoadingInfo(false));
+}, [selectedCountry]);
+
+C) UPDATE THE SELECTED COUNTRY INFO CARD at the top of the
+panel (the one that shows Quick Actions) to show:
+
+- Large flag emoji (from getFlagEmoji)
+- Country name in bold primary colour
+- 🏙️ Capital: {capital} (from countryInfo, or loading skeleton)
+- 👥 Population: {population.toLocaleString()} (or loading skeleton)
+- Languages as small cyan badge pills
+- "Translate to [language]" button (keep existing logic)
+- If loadingInfo is true, show a small animated pulse skeleton
+  for capital and population lines
+
+D) UPDATE EACH COUNTRY ROW in the scrollable list to show:
+- Flag emoji on the left: {getFlagEmoji(country.name)}
+- Country name (existing)
+- Language count badge (existing, keep as-is)
+
+The flag should appear as a small emoji (text-lg) 
+to the left of the country name in each row.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL RULES — DO NOT BREAK THESE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Do NOT change src/store/useAppStore.ts
+2. Do NOT change src/data/ folder contents
+3. Do NOT change src/hooks/useSpeechToText.ts
+4. Keep ALL existing data-testid attributes
+5. Keep ALL existing CSS classes (glass-panel, neon-text, etc.)
+6. Translation must still work with no keys via MyMemory fallback
+7. Wayfinder must show a friendly message if Google key is missing
+8. OpenAI features must show a clear message if key is missing
+9. All Capacitor imports must stay guarded with
+   Capacitor.isNativePlatform() checks
+10. The restcountries.com fetch must fail silently —
+    if it errors, simply do not show population/capital,
+    never show an error message to the user for this
+
+=====================================================================
+END OF PROMPT
+=====================================================================

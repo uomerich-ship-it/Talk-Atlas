@@ -67,7 +67,7 @@ client/           # React frontend
       translation/  # TranslationPanel (right-side drawer)
       countries/    # CountryListPanel with pin/recent/premium
       left/         # LeftDrawer, PhrasebookPanel, CulturalTipsPanel
-      right/        # WayfinderPanel (Google Places search + translation)
+      right/        # WayfinderPanel (unified Places+Directions), StreetViewPanel
       ui/           # shadcn/ui components, SettingsPanel
     data/           # Static JSON mappings (countryLanguages, languages)
     hooks/          # Custom React hooks (useSpeechToText with Capacitor mic, etc.)
