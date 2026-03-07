@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.talkAtlas.app',
   appName: 'TalkAtlas',
-  webDir: 'dist',
+  webDir: 'dist/public',
   server: {
     androidScheme: 'https',
     allowNavigation: [
