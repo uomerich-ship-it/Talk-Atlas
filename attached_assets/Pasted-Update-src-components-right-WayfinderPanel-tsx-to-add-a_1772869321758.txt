@@ -1,0 +1,59 @@
+Update src/components/right/WayfinderPanel.tsx to add a 
+Directions tab alongside the existing Find Places tab.
+
+Add two tabs at the top of the panel:
+- Tab 1: "Find Places" — keep ALL existing code exactly as is
+- Tab 2: "Directions" — new feature described below
+
+DIRECTIONS TAB:
+
+1. Origin input field — placeholder "Starting point..." 
+   with a MapPin icon on the left
+
+2. Destination input field — placeholder "Destination..."
+   with a Flag icon on the left
+
+3. A swap button between the two inputs that swaps 
+   origin and destination values
+
+4. Travel mode — 4 buttons in a row:
+   driving | walking | transit | bicycling
+   Show icons: 🚗 🚶 🚌 🚲
+   Active mode highlighted with bg-primary/20 border-primary/40 text-primary
+
+5. "Get Directions" button — same style as existing Find Places button
+
+6. Strip HTML from direction steps using:
+   const stripHtml = (html: string) => 
+     html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+
+7. Call Google Directions API:
+   const GOOGLE_KEY = import.meta.env.VITE_GOOGLE_PLACES_KEY as string
+   
+   fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&mode=${travelMode}&key=${GOOGLE_KEY}`)
+   
+   Parse response.routes[0].legs[0]:
+   - distance.text → total distance
+   - duration.text → total duration  
+   - steps[] → each step has html_instructions and distance.text
+
+8. After fetching, translate EACH step instruction into targetLang
+   using translateText() from services/translation.ts
+   (strip HTML first, then translate)
+
+9. Display results:
+   - Summary bar showing total distance and duration
+     styled with bg-white/5 border border-primary/20 rounded-xl
+   - Numbered list of steps, each showing:
+     * Translated instruction (text-sm text-white)
+     * Original instruction below it (text-xs text-muted-foreground/40)
+     * Step distance on the right (text-xs text-primary/60)
+   - Steps in a scrollable div with hide-scrollbar class
+
+10. If VITE_GOOGLE_PLACES_KEY is missing show:
+    "Add VITE_GOOGLE_PLACES_KEY to Replit Secrets to use Wayfinder"
+
+Keep ALL existing Find Places code completely unchanged.
+Keep onFlyTo prop and all existing imports.
+Use same styling patterns throughout — glass-panel colours, 
+cyan primary, muted-foreground text colours.
