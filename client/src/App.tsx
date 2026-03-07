@@ -6,14 +6,26 @@ import { GlobeView } from "./components/globe/GlobeView";
 import { TranslationPanel } from "./components/translation/TranslationPanel";
 import { LeftDrawer } from "./components/left/LeftDrawer";
 import { WayfinderPanel } from "./components/right/WayfinderPanel";
-import { useState, useRef } from "react";
-import { Languages, MapPin } from "lucide-react";
+import { AboutModal } from "./components/ui/AboutModal";
+import { TutorialOverlay } from "./components/ui/TutorialOverlay";
+import { useState, useRef, useEffect } from "react";
+import { Languages, MapPin, Info } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 
 type RightTab = 'translate' | 'wayfinder' | null;
 
 function TalkAtlasApp() {
   const [rightTab, setRightTab] = useState<RightTab>(null);
   const globeRef = useRef<any>(null);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    const seen = localStorage.getItem('talkAtlas_tutorial_seen');
+    if (!seen) {
+      setTimeout(() => setShowTutorial(true), 1500);
+    }
+  }, []);
 
   const handleFlyTo = (lat: number, lng: number) => {
     if (globeRef.current) {
@@ -70,6 +82,32 @@ function TalkAtlasApp() {
           ))}
         </div>
       </div>
+
+      <button
+        onClick={() => setShowAbout(true)}
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20
+                   flex items-center gap-2 px-4 py-2 rounded-full
+                   bg-black/50 backdrop-blur-xl border border-white/10
+                   hover:border-primary/30 text-muted-foreground
+                   hover:text-primary transition-all text-xs font-bold
+                   uppercase tracking-wider"
+        data-testid="button-about"
+      >
+        <Info className="w-3.5 h-3.5" />
+        About TalkAtlas
+      </button>
+
+      <AnimatePresence>
+        {showAbout && (
+          <AboutModal
+            onClose={() => setShowAbout(false)}
+            onOpenTutorial={() => { setShowAbout(false); setShowTutorial(true); }}
+          />
+        )}
+      </AnimatePresence>
+      {showTutorial && (
+        <TutorialOverlay onClose={() => setShowTutorial(false)} />
+      )}
     </div>
   );
 }

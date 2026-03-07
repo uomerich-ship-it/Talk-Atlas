@@ -1,0 +1,244 @@
+=====================================================================
+TALKATLAS — ABOUT + TUTORIAL PROMPT
+Paste this into Replit AI in ONE go.
+=====================================================================
+
+Create a beautiful About page and interactive Tutorial for
+TalkAtlas. This adds two new things to the app:
+
+1. An About modal/overlay accessible from a button in the UI
+2. A first-launch tutorial that walks new users through the app
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART A — CREATE About MODAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create src/components/ui/AboutModal.tsx:
+
+The modal is a full-screen overlay with a dark glass background.
+It has a close button (X) top right.
+It scrolls vertically on smaller screens.
+
+Structure of the About content:
+
+1. HEADER SECTION
+   - App icon placeholder (large globe emoji 🌍 or the icon)
+   - App name: "TalkAtlas" in large primary cyan Orbitron font
+   - Tagline: "The world in your hands. Every language at your fingertips."
+   - Version: "Version 1.0.0" in small muted text
+
+2. WHAT IS TALKATLAS section
+   Heading: "What is TalkAtlas?"
+   Body text:
+   "TalkAtlas is a next-generation travel companion and language
+   translation app built around a stunning interactive 3D globe.
+   Spin the Earth, tap any country, and instantly translate,
+   explore travel phrases, discover cultural tips, and find
+   places — all in your chosen language."
+
+3. FEATURES section — show as a grid of feature cards (2 columns)
+   Each card has an emoji icon, bold title, and one-line description:
+
+   🌍 Interactive Globe
+   "Spin a photorealistic 3D Earth and tap any of 195 countries"
+
+   🌐 AI Translation
+   "Powered by DeepL and OpenAI for natural, accurate translations"
+
+   🎤 Voice Input
+   "Speak to translate — hands-free voice recognition built in"
+
+   🔊 Text to Speech
+   "Hear your translation spoken aloud in the target language"
+
+   📖 Phrasebook
+   "AI-generated travel phrases for any country, with pronunciation"
+
+   💡 Culture Guide
+   "Learn customs, etiquette and tips before you visit"
+
+   🗺️ Wayfinder
+   "Search places, get directions, and fly the globe to any location"
+
+   🪟 Street View
+   "Explore destinations at street level before you arrive"
+
+4. HOW IT WORKS section
+   Three numbered steps with icons:
+   1️⃣  Spin the globe and tap a country
+   2️⃣  Choose a feature — Translate, Phrases, Culture or Wayfinder
+   3️⃣  Communicate confidently in any language
+
+5. PREMIUM section
+   Heading: "TalkAtlas Premium"
+   Subheading: "£1.99 / month"
+   List of premium benefits:
+   ✦ Unlimited translations
+   ✦ Remove all ads
+   ✦ Priority AI features
+   ✦ Early access to new features
+   A "Upgrade to Premium" button styled with gold/yellow gradient
+
+6. TECH STACK section (small, at bottom — users appreciate transparency)
+   "Powered by"
+   Small badges in a row: DeepL · OpenAI · Google Places · RevenueCat
+
+7. FOOTER
+   "Made with ❤️ for travellers worldwide"
+   "© 2025 TalkAtlas"
+   Links: Privacy Policy · Support
+
+Style the entire modal matching the app:
+- Background: bg-black/90 backdrop-blur-2xl
+- Cards: bg-white/5 border border-white/10 rounded-2xl
+- Headings: font-display (Orbitron) text-primary
+- Body: font-body (Rajdhani) text-muted-foreground
+- Dividers: border-white/10
+- Premium card: border border-yellow-400/30 bg-yellow-400/5
+- Keep consistent with existing glass-panel aesthetic
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART B — CREATE TUTORIAL OVERLAY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create src/components/ui/TutorialOverlay.tsx:
+
+This is a step-by-step first-launch tutorial.
+It shows automatically the FIRST time a user opens the app
+(check localStorage key 'talkAtlas_tutorial_seen').
+Users can also re-open it from the About modal.
+
+The tutorial has 6 steps shown as a full-screen overlay
+with a spotlight/highlight effect and a card at the bottom
+explaining each step.
+
+TUTORIAL STEPS:
+
+Step 1 — Welcome
+  Title: "Welcome to TalkAtlas 🌍"
+  Body: "Your intelligent travel companion. Let us show you
+  around in just a few quick steps."
+  Show: Centre of screen, no spotlight
+  Button: "Let's Go →"
+
+Step 2 — The Globe
+  Title: "Spin the Globe"
+  Body: "Drag to rotate the Earth. Tap any country to select
+  it — the app will automatically set the language for
+  that country."
+  Highlight: The globe area (centre of screen)
+  Button: "Next →"
+
+Step 3 — Left Panel
+  Title: "Countries, Phrases & Culture"
+  Body: "Tap the icons on the left to explore country info,
+  get AI-generated travel phrases, and discover cultural
+  tips for wherever you're visiting."
+  Highlight: Left sidebar icons
+  Button: "Next →"
+
+Step 4 — Translation
+  Title: "Translate Anything"
+  Body: "Tap Translate on the right. Type text or tap the
+  microphone to speak. Your words are instantly translated
+  into the country's language."
+  Highlight: Right sidebar translate tab
+  Button: "Next →"
+
+Step 5 — Wayfinder
+  Title: "Find Any Place"
+  Body: "Tap Wayfinder to search for restaurants, hospitals,
+  landmarks and more. Get directions with translated
+  turn-by-turn steps — and explore in Street View."
+  Highlight: Right sidebar wayfinder tab
+  Button: "Next →"
+
+Step 6 — Premium
+  Title: "Go Premium for the Full Experience"
+  Body: "Unlock unlimited translations, remove ads, and get
+  priority AI features for just £1.99/month."
+  Show: Centre of screen
+  Buttons: "Start Free" (skip) and "Upgrade Now →" (gold button)
+
+TUTORIAL UI DETAILS:
+- Dark overlay: bg-black/75 backdrop-blur-sm over entire screen
+- Info card: fixed bottom-8 left-1/2 -translate-x-1/2
+  max-w-sm w-full, glass-panel rounded-3xl p-6
+- Progress dots at top of card showing current step
+- Step counter: "3 of 6" in small muted text
+- Skip button: top-right corner, small, "Skip tutorial"
+- Primary button: bg-gradient-to-r from-primary to-cyan-400
+  text-black font-bold rounded-full px-8 py-3
+- Smooth fade transition between steps using framer-motion
+
+STORING TUTORIAL STATE:
+On completion or skip, set:
+  localStorage.setItem('talkAtlas_tutorial_seen', 'true')
+
+On first render, check:
+  const seen = localStorage.getItem('talkAtlas_tutorial_seen')
+  If not seen, show tutorial automatically after 1 second delay
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART C — ADD ABOUT BUTTON TO THE APP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In src/App.tsx:
+
+1. Import AboutModal, TutorialOverlay
+2. Add state:
+   const [showAbout, setShowAbout] = useState(false);
+   const [showTutorial, setShowTutorial] = useState(false);
+
+3. Add a small info button fixed at the bottom-right corner
+   of the screen (above the wayfinder tab, below the globe):
+   
+   <button
+     onClick={() => setShowAbout(true)}
+     className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20
+                flex items-center gap-2 px-4 py-2 rounded-full
+                bg-black/50 backdrop-blur-xl border border-white/10
+                hover:border-primary/30 text-muted-foreground
+                hover:text-primary transition-all text-xs font-bold
+                uppercase tracking-wider"
+   >
+     <Info className="w-3.5 h-3.5" />
+     About TalkAtlas
+   </button>
+
+4. Render modals at the bottom of TalkAtlasApp return:
+   {showAbout && (
+     <AboutModal
+       onClose={() => setShowAbout(false)}
+       onOpenTutorial={() => { setShowAbout(false); setShowTutorial(true); }}
+     />
+   )}
+   {showTutorial && (
+     <TutorialOverlay onClose={() => setShowTutorial(false)} />
+   )}
+
+5. Also auto-show tutorial on first visit:
+   useEffect(() => {
+     const seen = localStorage.getItem('talkAtlas_tutorial_seen');
+     if (!seen) {
+       setTimeout(() => setShowTutorial(true), 1500);
+     }
+   }, []);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Do NOT change useAppStore.ts
+2. Do NOT change any existing panels or globe code
+3. Keep all existing CSS classes
+4. Both modals must be closeable with Escape key as well
+   as the close button
+5. Tutorial must not show again after user has seen it once
+6. About modal must work on mobile (full screen, scrollable)
+7. Use framer-motion for all animations (already installed)
+8. Import Info icon from lucide-react
+
+=====================================================================
+END OF PROMPT
+=====================================================================

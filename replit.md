@@ -57,6 +57,8 @@ Preferred communication style: Simple, everyday language.
 - **Left**: LeftDrawer with 3 tabs: Countries (CountryListPanel), Phrasebook (PhrasebookPanel), Culture (CulturalTipsPanel)
 - **Center**: Full-screen 3D globe (GlobeView + UniverseBackground) with transparent renderer
 - **Right**: Sliding drawer with 2 tabs: Translate (TranslationPanel), Wayfinder (WayfinderPanel)
+- **Bottom center**: "About TalkAtlas" button opens AboutModal overlay
+- **Overlays**: AboutModal (app info, features, premium), TutorialOverlay (6-step first-launch walkthrough, stored in localStorage)
 
 ### Project Structure
 ```
@@ -68,7 +70,7 @@ client/           # React frontend
       countries/    # CountryListPanel with pin/recent/premium
       left/         # LeftDrawer, PhrasebookPanel, CulturalTipsPanel
       right/        # WayfinderPanel (unified Places+Directions), StreetViewPanel
-      ui/           # shadcn/ui components, SettingsPanel
+      ui/           # shadcn/ui components, SettingsPanel, AboutModal, TutorialOverlay
     data/           # Static JSON mappings (countryLanguages, languages)
     hooks/          # Custom React hooks (useSpeechToText with Capacitor mic, etc.)
     services/       # Translation service, AI features, Stripe checkout, billing (RevenueCat)
