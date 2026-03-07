@@ -143,6 +143,40 @@ export async function registerRoutes(
     }
   });
 
+  // Google Places text search proxy
+  const GOOGLE_KEY = process.env.GOOGLE_PLACES_KEY || process.env.VITE_GOOGLE_PLACES_KEY || '';
+
+  app.get('/api/places/search', async (req, res) => {
+    try {
+      const { query } = req.query;
+      if (!query) return res.status(400).json({ error: 'query required' });
+      if (!GOOGLE_KEY) return res.status(501).json({ error: 'Google API key not configured' });
+
+      const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query as string)}&key=${GOOGLE_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Google Directions proxy
+  app.get('/api/directions', async (req, res) => {
+    try {
+      const { origin, destination, mode } = req.query;
+      if (!origin || !destination) return res.status(400).json({ error: 'origin and destination required' });
+      if (!GOOGLE_KEY) return res.status(501).json({ error: 'Google API key not configured' });
+
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin as string)}&destination=${encodeURIComponent(destination as string)}&mode=${mode || 'driving'}&key=${GOOGLE_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Stripe checkout session (requires STRIPE_SECRET_KEY env var)
   app.post('/api/create-checkout-session', async (req, res) => {
     try {

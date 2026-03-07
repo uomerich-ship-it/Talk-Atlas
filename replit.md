@@ -106,8 +106,10 @@ public/
 - **DeepL API** (optional): VITE_DEEPL_API_KEY env var (direct frontend call)
 - **MyMemory API** (free fallback): No key required
 
-### Places Search
-- **Google Places API** (optional): VITE_GOOGLE_PLACES_KEY env var (for Wayfinder panel)
+### Places & Directions
+- **Google Places API** (optional): Server-side proxy at /api/places/search (avoids CORS)
+- **Google Directions API** (optional): Server-side proxy at /api/directions (avoids CORS)
+- **Server env**: GOOGLE_PLACES_KEY or VITE_GOOGLE_PLACES_KEY (server reads both)
 
 ### Payments
 - **Stripe** (optional, web): VITE_STRIPE_PUBLISHABLE_KEY, VITE_STRIPE_PREMIUM_PRICE_ID env vars

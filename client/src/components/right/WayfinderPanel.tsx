@@ -3,7 +3,6 @@ import { MapPin, Search, Loader2, ExternalLink, Globe2, Flag, ArrowUpDown, Navig
 import { useAppStore } from '../../store/useAppStore';
 import { translateText } from '../../services/translation';
 
-const GOOGLE_KEY = import.meta.env.VITE_GOOGLE_PLACES_KEY as string;
 
 interface Place {
   name: string;
@@ -60,19 +59,16 @@ export function WayfinderPanel({ onFlyTo }: { onFlyTo: (lat: number, lng: number
 
   const handleSearch = async () => {
     if (!query.trim()) return;
-    if (!GOOGLE_KEY) {
-      setError('Google Places API key not configured. Add VITE_GOOGLE_PLACES_KEY to Replit Secrets.');
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
       const locationBias = selectedCountry?.name ?? '';
       const searchQuery = locationBias ? `${query} in ${locationBias}` : query;
       const res = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${GOOGLE_KEY}`
+        `/api/places/search?query=${encodeURIComponent(searchQuery)}`
       );
       const data = await res.json();
+      if (data.error) throw new Error(data.error);
       if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') throw new Error(data.error_message ?? data.status);
 
       const results: Place[] = await Promise.all(
@@ -112,18 +108,15 @@ export function WayfinderPanel({ onFlyTo }: { onFlyTo: (lat: number, lng: number
 
   const handleGetDirections = async () => {
     if (!origin.trim() || !destination.trim()) return;
-    if (!GOOGLE_KEY) {
-      setDirError('Add VITE_GOOGLE_PLACES_KEY to Replit Secrets to use Wayfinder.');
-      return;
-    }
     setDirLoading(true);
     setDirError(null);
     setDirections(null);
     try {
       const res = await fetch(
-        `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&mode=${travelMode}&key=${GOOGLE_KEY}`
+        `/api/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&mode=${travelMode}`
       );
       const data = await res.json();
+      if (data.error) throw new Error(data.error);
       if (data.status !== 'OK') throw new Error(data.error_message ?? data.status ?? 'No route found');
 
       const leg = data.routes[0].legs[0];
