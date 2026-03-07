@@ -19,15 +19,33 @@ export function GlobeView({ globeRef }: { globeRef?: React.RefObject<any> }) {
   const { setCountries, selectedCountry, setSelectedCountry } = useAppStore();
   const [geoData, setGeoData] = useState<any>(null);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const webglAvailable = useMemo(() => isWebGLAvailable(), []);
 
   useEffect(() => {
-    fetch('https://raw.githubusercontent.com/vasturiano/react-globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson')
-      .then(res => res.json())
-      .then(data => {
+    const urls = [
+      'https://raw.githubusercontent.com/vasturiano/react-globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson',
+      'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+    ];
+
+    const tryFetch = async (index = 0): Promise<void> => {
+      if (index >= urls.length) {
+        setLoadError(true);
+        return;
+      }
+      try {
+        const res = await fetch(urls[index]);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
         setGeoData(data);
-        setCountries(getCountries(data.features));
-      });
+        setCountries(getCountries(data.features ?? []));
+        setLoadError(false);
+      } catch {
+        tryFetch(index + 1);
+      }
+    };
+
+    tryFetch();
   }, [setCountries]);
 
   useEffect(() => {
