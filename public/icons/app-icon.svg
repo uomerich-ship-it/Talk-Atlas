@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0a1628"/>
+      <stop offset="100%" stop-color="#020202"/>
+    </radialGradient>
+    <radialGradient id="globe" cx="40%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#1a6b8a"/>
+      <stop offset="60%" stop-color="#0d3d5c"/>
+      <stop offset="100%" stop-color="#061e2f"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00FFFF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00FFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FFFF"/>
+      <stop offset="50%" stop-color="#00CCDD"/>
+      <stop offset="100%" stop-color="#00FFFF"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <circle cx="256" cy="240" r="180" fill="url(#glow)"/>
+
+  <circle cx="256" cy="240" r="130" fill="url(#globe)" stroke="url(#ring)" stroke-width="3"/>
+
+  <ellipse cx="256" cy="240" rx="130" ry="130" fill="none" stroke="#00FFFF" stroke-width="1" opacity="0.3"/>
+  <ellipse cx="256" cy="240" rx="90" ry="130" fill="none" stroke="#00FFFF" stroke-width="0.8" opacity="0.25"/>
+  <ellipse cx="256" cy="240" rx="45" ry="130" fill="none" stroke="#00FFFF" stroke-width="0.6" opacity="0.2"/>
+
+  <line x1="126" y1="200" x2="386" y2="200" stroke="#00FFFF" stroke-width="0.6" opacity="0.2"/>
+  <line x1="126" y1="240" x2="386" y2="240" stroke="#00FFFF" stroke-width="0.8" opacity="0.25"/>
+  <line x1="126" y1="280" x2="386" y2="280" stroke="#00FFFF" stroke-width="0.6" opacity="0.2"/>
+
+  <path d="M180 200 Q200 185 230 190 Q250 195 260 180 Q280 175 300 190 Q320 195 340 185" 
+        fill="none" stroke="#00FFFF" stroke-width="1.5" opacity="0.5"/>
+  <path d="M160 230 Q185 220 210 225 Q230 230 245 220 Q265 215 280 225 Q300 235 330 225 Q350 220 370 230" 
+        fill="none" stroke="#00FFFF" stroke-width="1.5" opacity="0.5"/>
+  <path d="M175 265 Q195 255 220 260 Q240 265 255 258 Q275 252 295 260 Q315 268 335 260 Q355 255 365 262" 
+        fill="none" stroke="#00FFFF" stroke-width="1.5" opacity="0.5"/>
+
+  <circle cx="200" cy="210" r="4" fill="#00FFFF" opacity="0.8"/>
+  <circle cx="200" cy="210" r="8" fill="#00FFFF" opacity="0.15"/>
+  <circle cx="310" cy="250" r="4" fill="#FFD700" opacity="0.8"/>
+  <circle cx="310" cy="250" r="8" fill="#FFD700" opacity="0.15"/>
+
+  <path d="M200 210 Q240 170 280 200 Q300 215 310 250" 
+        fill="none" stroke="#00FFFF" stroke-width="2" opacity="0.6" 
+        stroke-dasharray="6 4"/>
+
+  <g transform="translate(256,240)">
+    <circle cx="0" cy="0" r="135" fill="none" stroke="#00FFFF" stroke-width="1.5" opacity="0.15"
+            stroke-dasharray="3 8"/>
+  </g>
+
+  <text x="256" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" 
+        font-weight="800" font-size="52" letter-spacing="6" fill="#00FFFF">
+    TALKATLAS
+  </text>
+  <text x="256" y="450" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" 
+        font-weight="400" font-size="16" letter-spacing="8" fill="#00FFFF" opacity="0.5">
+    UNIVERSAL TRANSLATOR
+  </text>
+</svg>
