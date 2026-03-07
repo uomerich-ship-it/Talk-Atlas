@@ -77,7 +77,7 @@ export function CountryListPanel() {
   const infoCache = useRef<Record<string, { population: number; capital: string }>>({});
 
   useEffect(() => {
-    if (!selectedCountry) return;
+    if (!selectedCountry) { setCountryInfo(null); return; }
     const name = selectedCountry.name;
     if (infoCache.current[name]) {
       setCountryInfo(infoCache.current[name]);
@@ -159,7 +159,7 @@ export function CountryListPanel() {
   );
 
   return (
-    <div className="w-80 h-full glass-panel flex flex-col p-4 border-r border-white/10 z-20">
+    <div className="w-80 h-full glass-panel flex flex-col p-4 border-r border-white/10 z-20 overflow-hidden">
       <div className="mb-4">
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-primary" />
@@ -268,7 +268,7 @@ export function CountryListPanel() {
         </div>
       </div>
 
-      <ScrollArea className="flex-1 -mr-2 pr-2">
+      <ScrollArea className="flex-1 min-h-0 -mr-2 pr-2">
         <div className="space-y-4">
           {pinnedList.length > 0 && (
             <div className="space-y-1">

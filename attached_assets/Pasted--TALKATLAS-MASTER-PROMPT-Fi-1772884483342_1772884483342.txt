@@ -1,0 +1,503 @@
+=====================================================================
+TALKATLAS — MASTER PROMPT (Final Version)
+Paste this entire file into Replit AI in ONE go.
+Do every change in order. Do not skip any section.
+=====================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 0 — ADD LOCATION PIN MARKERS ON GLOBE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In src/components/globe/GlobeView.tsx add pin marker support.
+
+1. Add markers state at the top of the component:
+   const [markers, setMarkers] = useState<any[]>([]);
+
+2. Import useImperativeHandle and forwardRef.
+   Wrap GlobeView with forwardRef so the ref works properly.
+
+3. Add these functions inside the useImperativeHandle block
+   alongside any existing pointOfView, setRoute, clearRoute:
+
+   addMarker: (
+     lat: number,
+     lng: number,
+     label: string,
+     color = '#00FFFF'
+   ) => {
+     setMarkers(prev => [...prev, { lat, lng, label, color }]);
+   },
+
+   clearMarkers: () => setMarkers([]),
+
+   setMarkerAndFly: (lat: number, lng: number, label: string) => {
+     setMarkers([{ lat, lng, label, color: '#00FFFF' }]);
+     globeEl.current?.pointOfView(
+       { lat, lng, altitude: 1.5 },
+       1500
+     );
+   },
+
+4. Add these props to the GlobeTGL component:
+
+   pointsData={markers}
+   pointLat="lat"
+   pointLng="lng"
+   pointLabel="label"
+   pointColor="color"
+   pointAltitude={0.02}
+   pointRadius={0.5}
+   pointsMerge={false}
+
+5. In WayfinderPanel when user clicks "Fly Here" on a
+   place result card:
+   Call globeRef.current?.setMarkerAndFly(
+     place.lat, place.lng, place.name
+   )
+
+6. When directions are fetched and the arc is drawn:
+   - First call globeRef.current?.clearMarkers()
+   - Then call globeRef.current?.addMarker(
+       originLat, originLng, origin, '#00FFFF'
+     )  — cyan pin for origin
+   - Then call globeRef.current?.addMarker(
+       destLat, destLng, destination, '#FFD700'
+     )  — gold pin for destination
+
+7. When directions panel is cleared or closed:
+   - Call globeRef.current?.clearMarkers()
+   - Call globeRef.current?.clearRoute()
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 1 — FIX OpenAI RATE LIMITING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In src/services/aiFeatures.ts, update the openAIChat function
+to use 'gpt-3.5-turbo' as the default model and add retry
+logic with exponential backoff:
+
+async function openAIChat(
+  systemPrompt: string,
+  userPrompt: string,
+  model = 'gpt-3.5-turbo'
+): Promise<string> {
+  if (!OPENAI_KEY) throw new Error('OpenAI API key not configured');
+
+  const makeRequest = async (retries = 2): Promise<string> => {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1000,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+    });
+
+    if (res.status === 429 && retries > 0) {
+      await new Promise(r => setTimeout(r, 2000));
+      return makeRequest(retries - 1);
+    }
+
+    if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() ?? '';
+  };
+
+  return makeRequest();
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 2 — MERGE FIND PLACES INTO DIRECTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Replace src/components/right/WayfinderPanel.tsx entirely
+with one unified panel. Remove the Find Places / Directions
+tab switcher. Replace with ONE panel structured like this:
+
+TOP SECTION — Place Search (always visible):
+- Title "Wayfinder" with MapPin icon
+- Search input: "Search places, landmarks, addresses..."
+- "Search" button styled same as existing buttons
+- Results as cards showing:
+  * Name (translated into targetLang)
+  * Original name below if different (text-xs muted)
+  * Address (translated into targetLang)
+  * Star rating if available
+  * Three action buttons in a row:
+    - 📍 Fly Here  →  calls globeRef setMarkerAndFly
+    - 🗺️ Directions  →  fills destination field below
+      and expands the directions section
+    - 🪟 Street View  →  opens StreetViewPanel overlay
+
+BOTTOM SECTION — Directions (collapsible):
+- Expand/collapse toggle with chevron icon
+- Title: "Get Directions"
+- Shows by default as collapsed
+- Auto-expands when user clicks Directions on a result
+- Origin input with MapPin icon: "Starting point..."
+- Swap button (↕) between origin and destination
+- Destination input with Flag icon: "Destination..."
+  (pre-filled when user clicks Directions from a result)
+- 4 travel mode buttons in a row:
+  🚗 DRIVE  🚶 WALK  🚌 TRANSIT  🚲 BIKE
+  Active mode: bg-primary/20 border border-primary/40 text-primary
+  Inactive: bg-white/5 border border-white/10 text-muted-foreground
+- "Get Directions" button
+- On success show:
+  * Summary bar: Total Distance (left) and Duration (right)
+    styled bg-white/5 border border-primary/20 rounded-xl p-3
+  * Numbered list of steps each showing:
+    - Translated instruction (text-sm text-white font-medium)
+    - Original English below (text-xs text-muted-foreground/40)
+    - Step distance on far right (text-xs text-primary/60)
+  * Steps in scrollable div with hide-scrollbar class
+- Clear/reset button at bottom of directions results
+
+Use existing proxy routes:
+  GET /api/places/search?query={searchQuery}
+  GET /api/directions?origin={}&destination={}&mode={}
+
+Parse places: data.results[].geometry.location for lat/lng
+Parse directions: data.routes[0].legs[0]
+  distance.text, duration.text, steps[].html_instructions,
+  steps[].distance.text
+
+Strip HTML from direction steps:
+  const stripHtml = (html: string) =>
+    html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+
+Translate each direction step using translateText() from
+src/services/translation.ts after stripping HTML.
+
+After directions fetch completes, geocode origin and
+destination using /api/places/search then call:
+  globeRef.current?.clearMarkers()
+  globeRef.current?.addMarker(originLat, originLng, origin, '#00FFFF')
+  globeRef.current?.addMarker(destLat, destLng, destination, '#FFD700')
+  globeRef.current?.setRoute(originLat, originLng, destLat, destLng)
+
+When directions are cleared call:
+  globeRef.current?.clearMarkers()
+  globeRef.current?.clearRoute()
+
+If VITE_GOOGLE_PLACES_KEY is missing show a friendly message:
+"Add VITE_GOOGLE_PLACES_KEY to Replit Secrets to use Wayfinder"
+
+Pass globeRef from App.tsx to WayfinderPanel as a prop.
+Keep all existing styling patterns throughout.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 3 — DRAW ROUTE ARC LINE ON GLOBE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In src/components/globe/GlobeView.tsx add animated arc
+route drawing. This works alongside the markers from
+Change 0 — both must coexist.
+
+1. Add routeArc state:
+   const [routeArc, setRouteArc] = useState<any[]>([]);
+
+2. Add these to the useImperativeHandle block:
+
+   setRoute: (
+     startLat: number,
+     startLng: number,
+     endLat: number,
+     endLng: number
+   ) => {
+     setRouteArc([{ startLat, startLng, endLat, endLng }]);
+     const midLat = (startLat + endLat) / 2;
+     const midLng = (startLng + endLng) / 2;
+     globeEl.current?.pointOfView(
+       { lat: midLat, lng: midLng, altitude: 2.5 },
+       2000
+     );
+   },
+
+   clearRoute: () => setRouteArc([]),
+
+3. Add these props to GlobeTGL:
+
+   arcsData={routeArc}
+   arcColor={() => '#00FFFF'}
+   arcAltitude={0.3}
+   arcStroke={1.5}
+   arcDashLength={0.4}
+   arcDashGap={0.2}
+   arcDashAnimateTime={2000}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 4 — STREET VIEW PANEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create new file src/components/right/StreetViewPanel.tsx
+with this exact content:
+
+---FILE START---
+import { X, Camera } from 'lucide-react';
+
+interface StreetViewPanelProps {
+  lat: number;
+  lng: number;
+  placeName: string;
+  onClose: () => void;
+}
+
+export function StreetViewPanel({
+  lat,
+  lng,
+  placeName,
+  onClose,
+}: StreetViewPanelProps) {
+  const GOOGLE_KEY = import.meta.env.VITE_GOOGLE_PLACES_KEY as string;
+  const streetViewUrl =
+    `https://www.google.com/maps/embed/v1/streetview` +
+    `?key=${GOOGLE_KEY}` +
+    `&location=${lat},${lng}` +
+    `&heading=0&pitch=0&fov=90`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="relative w-full max-w-3xl mx-4 rounded-2xl overflow-hidden border border-primary/30 shadow-2xl">
+
+        <div className="flex items-center justify-between px-4 py-3 bg-black/90 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <Camera className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold text-primary uppercase tracking-wider">
+              Street View
+            </span>
+            <span className="text-xs text-muted-foreground/60 ml-1">
+              — {placeName}
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="relative" style={{ paddingBottom: '56.25%' }}>
+          <iframe
+            src={streetViewUrl}
+            className="absolute inset-0 w-full h-full"
+            frameBorder="0"
+            allowFullScreen
+            title={`Street View — ${placeName}`}
+          />
+        </div>
+
+        <div className="px-4 py-2 bg-black/90 border-t border-white/10">
+          <p className="text-[10px] text-muted-foreground/40">
+            Drag to look around · Scroll to zoom · Click arrows to move
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+---FILE END---
+
+In WayfinderPanel.tsx:
+
+1. Import StreetViewPanel:
+   import { StreetViewPanel } from './StreetViewPanel';
+
+2. Add state:
+   const [streetView, setStreetView] = useState<{
+     lat: number;
+     lng: number;
+     name: string;
+   } | null>(null);
+
+3. Street View button in each place card:
+   onClick={() => setStreetView({
+     lat: place.lat,
+     lng: place.lng,
+     name: place.name,
+   })}
+
+4. At the bottom of the WayfinderPanel return, just before
+   the final closing tag:
+   {streetView && (
+     <StreetViewPanel
+       lat={streetView.lat}
+       lng={streetView.lng}
+       placeName={streetView.name}
+       onClose={() => setStreetView(null)}
+     />
+   )}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 5 — IMPROVE COUNTRIES LEFT PANEL WITH
+FLAG, CAPITAL, POPULATION AND LANGUAGES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Update src/components/countries/CountryListPanel.tsx
+with all of the following:
+
+A) ADD FLAG EMOJI HELPER at the top of the file
+   (outside the component):
+
+const getFlagEmoji = (countryName: string): string => {
+  const flagMap: Record<string, string> = {
+    'Afghanistan':'🇦🇫','Albania':'🇦🇱','Algeria':'🇩🇿',
+    'Argentina':'🇦🇷','Australia':'🇦🇺','Austria':'🇦🇹',
+    'Bangladesh':'🇧🇩','Belgium':'🇧🇪','Bolivia':'🇧🇴',
+    'Brazil':'🇧🇷','Bulgaria':'🇧🇬','Cambodia':'🇰🇭',
+    'Canada':'🇨🇦','Chile':'🇨🇱','China':'🇨🇳',
+    'Colombia':'🇨🇴','Croatia':'🇭🇷','Cuba':'🇨🇺',
+    'Czech Republic':'🇨🇿','Denmark':'🇩🇰','Ecuador':'🇪🇨',
+    'Egypt':'🇪🇬','Ethiopia':'🇪🇹','Finland':'🇫🇮',
+    'France':'🇫🇷','Germany':'🇩🇪','Ghana':'🇬🇭',
+    'Greece':'🇬🇷','Guatemala':'🇬🇹','Honduras':'🇭🇳',
+    'Hungary':'🇭🇺','India':'🇮🇳','Indonesia':'🇮🇩',
+    'Iran':'🇮🇷','Iraq':'🇮🇶','Ireland':'🇮🇪',
+    'Israel':'🇮🇱','Italy':'🇮🇹','Jamaica':'🇯🇲',
+    'Japan':'🇯🇵','Jordan':'🇯🇴','Kenya':'🇰🇪',
+    'South Korea':'🇰🇷','Kuwait':'🇰🇼','Lebanon':'🇱🇧',
+    'Libya':'🇱🇾','Malaysia':'🇲🇾','Mexico':'🇲🇽',
+    'Morocco':'🇲🇦','Mozambique':'🇲🇿','Myanmar':'🇲🇲',
+    'Nepal':'🇳🇵','Netherlands':'🇳🇱','New Zealand':'🇳🇿',
+    'Nigeria':'🇳🇬','Norway':'🇳🇴','Pakistan':'🇵🇰',
+    'Panama':'🇵🇦','Paraguay':'🇵🇾','Peru':'🇵🇪',
+    'Philippines':'🇵🇭','Poland':'🇵🇱','Portugal':'🇵🇹',
+    'Qatar':'🇶🇦','Romania':'🇷🇴','Russia':'🇷🇺',
+    'Saudi Arabia':'🇸🇦','Senegal':'🇸🇳','Serbia':'🇷🇸',
+    'Singapore':'🇸🇬','Somalia':'🇸🇴','South Africa':'🇿🇦',
+    'Spain':'🇪🇸','Sri Lanka':'🇱🇰','Sudan':'🇸🇩',
+    'Sweden':'🇸🇪','Switzerland':'🇨🇭','Syria':'🇸🇾',
+    'Taiwan':'🇹🇼','Tanzania':'🇹🇿','Thailand':'🇹🇭',
+    'Tunisia':'🇹🇳','Turkey':'🇹🇷','Uganda':'🇺🇬',
+    'Ukraine':'🇺🇦','United Arab Emirates':'🇦🇪',
+    'United Kingdom':'🇬🇧',
+    'United States of America':'🇺🇸',
+    'Uruguay':'🇺🇾','Venezuela':'🇻🇪','Vietnam':'🇻🇳',
+    'Yemen':'🇾🇪','Zambia':'🇿🇲','Zimbabwe':'🇿🇼',
+  };
+  return flagMap[countryName] ?? '🌐';
+};
+
+B) ADD COUNTRY INFO FETCH inside the component.
+   Add these state variables and useRef at the top:
+
+   const [countryInfo, setCountryInfo] = useState<{
+     population: number;
+     capital: string;
+   } | null>(null);
+   const [loadingInfo, setLoadingInfo] = useState(false);
+   const infoCache = useRef<
+     Record<string, { population: number; capital: string }>
+   >({});
+
+   Add this useEffect to fetch info when selectedCountry changes:
+
+   useEffect(() => {
+     if (!selectedCountry) { setCountryInfo(null); return; }
+     const name = selectedCountry.name;
+     if (infoCache.current[name]) {
+       setCountryInfo(infoCache.current[name]);
+       return;
+     }
+     setLoadingInfo(true);
+     fetch(
+       `https://restcountries.com/v3.1/name/${encodeURIComponent(name)}?fields=population,capital`
+     )
+       .then(r => r.json())
+       .then(data => {
+         if (Array.isArray(data) && data[0]) {
+           const info = {
+             population: data[0].population ?? 0,
+             capital: data[0].capital?.[0] ?? '',
+           };
+           infoCache.current[name] = info;
+           setCountryInfo(info);
+         }
+       })
+       .catch(() => setCountryInfo(null))
+       .finally(() => setLoadingInfo(false));
+   }, [selectedCountry]);
+
+C) UPDATE THE SELECTED COUNTRY INFO CARD (the expanded
+   card that shows at the top when a country is selected).
+   Replace its content with:
+
+   - Large flag emoji: {getFlagEmoji(selectedCountry.name)}
+     text-4xl mb-2
+   - Country name: text-lg font-bold text-primary
+   - If loadingInfo: show two skeleton pulse lines for
+     capital and population
+     (className="h-3 w-32 bg-white/10 rounded animate-pulse")
+   - If countryInfo:
+     * 🏙️ Capital: {countryInfo.capital}
+       text-xs text-muted-foreground/70
+     * 👥 Population: {countryInfo.population.toLocaleString()}
+       text-xs text-muted-foreground/70
+   - Languages as small badge pills:
+     {selectedCountry.languages.map(lang => (
+       <span key={lang}
+         className="text-[9px] px-2 py-0.5 rounded-full
+                    bg-primary/10 border border-primary/20
+                    text-primary/70 font-bold uppercase">
+         {lang}
+       </span>
+     ))}
+   - Keep the existing "Translate to [language]" button
+     and language selector exactly as they are now
+
+D) UPDATE EACH COUNTRY ROW in the scrollable list.
+   In the renderCountryRow function, add the flag emoji
+   as the first element inside the row button:
+
+   <span className="text-base mr-1">
+     {getFlagEmoji(country.name)}
+   </span>
+
+   Place it just before the country name span.
+
+E) FIX SCROLLING — make sure the country list scrolls
+   properly all the way to the bottom.
+
+   Find the ScrollArea (or scrollable div) that wraps the
+   country rows and ensure its parent chain has:
+
+   Outer panel container:
+     className="... flex flex-col h-full overflow-hidden"
+
+   ScrollArea or scrollable div:
+     className="flex-1 min-h-0 overflow-y-auto"
+
+   This ensures users can scroll down to see all countries.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL RULES — DO NOT BREAK THESE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1.  Do NOT change src/store/useAppStore.ts
+2.  Do NOT change anything in src/data/ folder
+3.  Do NOT change src/hooks/useSpeechToText.ts
+4.  Keep ALL existing data-testid attributes
+5.  Keep ALL existing CSS classes (glass-panel, neon-text etc.)
+6.  Translation must still work with no keys via MyMemory
+7.  Wayfinder must show a friendly message if Google key missing
+8.  OpenAI features must show a clear message if key missing
+9.  All Capacitor imports must stay guarded with
+    Capacitor.isNativePlatform() checks
+10. The restcountries.com fetch must fail silently — if it
+    errors do not show any error message to the user
+11. Pin markers (Change 0) and arc routes (Change 3) must
+    both work at the same time without conflicting
+12. forwardRef must be applied to GlobeView so the globeRef
+    passed from App.tsx can access all exposed methods
+
+=====================================================================
+END OF PROMPT
+=====================================================================

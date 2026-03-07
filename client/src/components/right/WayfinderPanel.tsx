@@ -169,6 +169,9 @@ export function WayfinderPanel({ onFlyTo, globeRef }: WayfinderPanelProps) {
         const dLat = destRes.results?.[0]?.geometry?.location?.lat;
         const dLng = destRes.results?.[0]?.geometry?.location?.lng;
         if (oLat != null && oLng != null && dLat != null && dLng != null && globeRef?.current) {
+          globeRef.current.clearMarkers();
+          globeRef.current.addMarker(oLat, oLng, origin, '#00FFFF');
+          globeRef.current.addMarker(dLat, dLng, destination, '#FFD700');
           globeRef.current.setRoute(oLat, oLng, dLat, dLng);
         }
       } catch {}
@@ -192,6 +195,7 @@ export function WayfinderPanel({ onFlyTo, globeRef }: WayfinderPanelProps) {
     setOrigin('');
     setDestination('');
     setDirectionsExpanded(false);
+    globeRef?.current?.clearMarkers();
     globeRef?.current?.clearRoute();
   };
 
@@ -271,7 +275,13 @@ export function WayfinderPanel({ onFlyTo, globeRef }: WayfinderPanelProps) {
 
             <div className="flex gap-1.5">
               <button
-                onClick={() => onFlyTo(p.lat, p.lng)}
+                onClick={() => {
+                  if (globeRef?.current?.setMarkerAndFly) {
+                    globeRef.current.setMarkerAndFly(p.lat, p.lng, p.name);
+                  } else {
+                    onFlyTo(p.lat, p.lng);
+                  }
+                }}
                 className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider transition-all"
                 data-testid={`button-fly-to-${i}`}
               >

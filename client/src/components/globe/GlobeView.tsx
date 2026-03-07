@@ -20,6 +20,7 @@ export const GlobeView = forwardRef(function GlobeView(_props, ref) {
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [routeArc, setRouteArc] = useState<any[]>([]);
+  const [markers, setMarkers] = useState<any[]>([]);
   const webglAvailable = useMemo(() => isWebGLAvailable(), []);
 
   useImperativeHandle(ref, () => ({
@@ -40,6 +41,22 @@ export const GlobeView = forwardRef(function GlobeView(_props, ref) {
       );
     },
     clearRoute: () => setRouteArc([]),
+    addMarker: (
+      lat: number,
+      lng: number,
+      label: string,
+      color = '#00FFFF'
+    ) => {
+      setMarkers(prev => [...prev, { lat, lng, label, color }]);
+    },
+    clearMarkers: () => setMarkers([]),
+    setMarkerAndFly: (lat: number, lng: number, label: string) => {
+      setMarkers([{ lat, lng, label, color: '#00FFFF' }]);
+      globeEl.current?.pointOfView(
+        { lat, lng, altitude: 1.5 },
+        1500
+      );
+    },
   }));
 
   useEffect(() => {
@@ -145,6 +162,15 @@ export const GlobeView = forwardRef(function GlobeView(_props, ref) {
           atmosphereColor="rgba(0, 180, 255, 1)"
           atmosphereAltitude={0.18}
           rendererConfig={{ antialias: true, alpha: true, clearColor: 0x000000, clearAlpha: 0 }}
+          
+          pointsData={markers}
+          pointLat="lat"
+          pointLng="lng"
+          pointLabel="label"
+          pointColor="color"
+          pointAltitude={0.02}
+          pointRadius={0.5}
+          pointsMerge={false}
           
           arcsData={routeArc}
           arcColor={() => '#00FFFF'}
