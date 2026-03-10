@@ -1,0 +1,38 @@
+workflows:
+  android-workflow:
+    name: TalkAtlas Android Build
+    max_build_duration: 60
+    environment:
+      java: 17
+      node: 20
+    scripts:
+      - name: Install dependencies
+        script: npm install
+      - name: Build web assets
+        script: npm run build
+      - name: Sync Capacitor
+        script: npx cap sync android
+      - name: Fix cordova file
+        script: |
+          cat > android/capacitor-cordova-android-plugins/cordova.variables.gradle << 'EOF'
+          ext {
+              minSdkVersion = 22
+              compileSdkVersion = 34
+              targetSdkVersion = 34
+              androidxActivityVersion = '1.7.0'
+              androidxAppCompatVersion = '1.6.1'
+              androidxCoordinatorLayoutVersion = '1.2.0'
+              androidxCoreVersion = '1.10.1'
+              androidxFragmentVersion = '1.6.0'
+              junitVersion = '4.13.2'
+              androidxJunitVersion = '1.1.5'
+              androidxEspressoCoreVersion = '3.5.1'
+              cordovaAndroidVersion = '10.1.1'
+          }
+          EOF
+      - name: Build Android
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
