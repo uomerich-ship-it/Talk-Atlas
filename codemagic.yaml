@@ -12,7 +12,7 @@ workflows:
         script: npm run build
       - name: Sync Capacitor
         script: npx cap sync android
-      - name: Fix cordova file
+      - name: Fix cordova files
         script: |
           cat > android/capacitor-cordova-android-plugins/cordova.variables.gradle << 'EOF'
           ext {
@@ -28,6 +28,23 @@ workflows:
               androidxJunitVersion = '1.1.5'
               androidxEspressoCoreVersion = '3.5.1'
               cordovaAndroidVersion = '10.1.1'
+          }
+          EOF
+          cat > android/capacitor-cordova-android-plugins/build.gradle << 'EOF'
+          apply plugin: 'com.android.library'
+          android {
+              namespace "capacitor.cordova.plugins"
+              compileSdkVersion 34
+              defaultConfig {
+                  minSdkVersion 22
+                  targetSdkVersion 34
+              }
+              lintOptions {
+                  abortOnError false
+              }
+          }
+          dependencies {
+              implementation fileTree(include: ['*.jar'], dir: 'libs')
           }
           EOF
       - name: Build Android
