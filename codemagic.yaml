@@ -3,16 +3,18 @@ workflows:
     name: TalkAtlas Android Build
     max_build_duration: 60
     environment:
-      java: 21
+      java: 17
       node: 20
     scripts:
       - name: Install dependencies
-        script: npm install
+        script: |
+          npm uninstall @revenuecat/purchases-capacitor || true
+          npm install
       - name: Build web assets
         script: npm run build
       - name: Sync Capacitor
         script: npx cap sync android
-      - name: Fix cordova files
+      - name: Fix cordova and gradle files
         script: |
           cat > android/capacitor-cordova-android-plugins/cordova.variables.gradle << 'ENDVARS'
           ext {
@@ -47,9 +49,13 @@ workflows:
               implementation fileTree(include: ['*.jar'], dir: 'libs')
           }
           ENDBUILD
+          sed -i '/revenuecat/d' android/settings.gradle || true
+          sed -i '/revenuecat/d' android/capacitor.settings.gradle || true
       - name: Build Android
         script: |
           cd android
-          ./gradlew bundleRelease
+          export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+          ./gradlew bundleRelease \
+            -Dorg.gradle.java.home=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
     artifacts:
       - android/app/build/outputs/bundle/release/*.aab
